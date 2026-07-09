@@ -272,7 +272,15 @@ const crewRank = ref([
               <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2 text-gray-400">
                 <span class="material-symbols-outlined">upload_file</span>
               </div>
-              <p class="text-sm font-medium text-primary">Unggah Materi Baru</p>
+              <p class="text-sm font-medium text-primary">Unggah Materi</p>
+            </div>
+
+            <!-- Create New Quiz -->
+            <div @click="$router.push('/quiz-builder')" class="p-4 rounded-lg border border-dashed border-primary flex flex-col items-center justify-center text-center bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer min-h-[160px]">
+              <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center mb-2">
+                <span class="material-symbols-outlined">add_task</span>
+              </div>
+              <p class="text-sm font-bold text-primary">Buat Kuis Baru</p>
             </div>
             
           </div>

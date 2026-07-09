@@ -10,13 +10,17 @@ exports.LmsModule = void 0;
 const common_1 = require("@nestjs/common");
 const course_controller_1 = require("./course.controller");
 const course_service_1 = require("./course.service");
+const quiz_controller_1 = require("./quiz.controller");
+const quiz_service_1 = require("./quiz.service");
+const certificate_template_controller_1 = require("./certificate-template.controller");
+const certificate_template_service_1 = require("./certificate-template.service");
 let LmsModule = class LmsModule {
 };
 exports.LmsModule = LmsModule;
 exports.LmsModule = LmsModule = __decorate([
     (0, common_1.Module)({
-        controllers: [course_controller_1.CourseController],
-        providers: [course_service_1.CourseService]
+        controllers: [course_controller_1.CourseController, quiz_controller_1.QuizController, certificate_template_controller_1.CertificateTemplateController],
+        providers: [course_service_1.CourseService, quiz_service_1.QuizService, certificate_template_service_1.CertificateTemplateService]
     })
 ], LmsModule);
 //# sourceMappingURL=lms.module.js.map

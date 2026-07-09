@@ -5,8 +5,8 @@ export declare class TemplateService {
     findAllForOfflineSync(): Promise<({
         Checklists: {
             id: string;
-            template_id: string;
             question_text: string;
+            template_id: string;
         }[];
     } & {
         id: string;

@@ -4,7 +4,7 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
   engineType = "library"
 }
 
@@ -55,8 +55,64 @@ model CourseMaterial {
   min_read_time Int? // in seconds
 
   Course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  Quiz   Quiz?
 
   @@map("course_materials")
+}
+
+// Entitas Induk Kuis
+model Quiz {
+  id                      String  @id @default(uuid())
+  course_material_id      String  @unique // Relasi 1-to-1 dengan CourseMaterial
+  passing_score           Float // Nilai minimal kelulusan (misal 80.0)
+  certificate_template_id String? // ID template sertifikat jika ada
+
+  Material             CourseMaterial        @relation(fields: [course_material_id], references: [id], onDelete: Cascade)
+  Questions            QuizQuestion[]
+  Template             CertificateTemplate?  @relation(fields: [certificate_template_id], references: [id])
+  EmployeeQuizAttempts EmployeeQuizAttempt[]
+
+  @@map("quizzes")
+}
+
+// Bank Soal
+model QuizQuestion {
+  id            String @id @default(uuid())
+  quiz_id       String
+  question_text String @db.Text
+  type          String @default("MULTIPLE_CHOICE") // MULTIPLE_CHOICE, MULTIPLE_ANSWER, TRUE_FALSE
+
+  Quiz    Quiz         @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  Options QuizOption[]
+
+  @@map("quiz_questions")
+}
+
+// Pilihan Jawaban
+model QuizOption {
+  id          String  @id @default(uuid())
+  question_id String
+  option_text String
+  is_correct  Boolean // Kunci jawaban
+
+  Question QuizQuestion @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@map("quiz_options")
+}
+
+// Template Sertifikat
+model CertificateTemplate {
+  id              String @id @default(uuid())
+  name            String
+  bg_image_url    String // Latar belakang sertifikat
+  name_pos_x      Float // Koordinat X untuk nama peserta
+  name_pos_y      Float // Koordinat Y untuk nama peserta
+  name_font_size  Int    @default(32)
+  name_font_color String @default("#000000")
+
+  Quizzes Quiz[]
+
+  @@map("certificate_templates")
 }
 
 model EmployeeCourseProgress {
@@ -74,11 +130,12 @@ model EmployeeCourseProgress {
 model EmployeeQuizAttempt {
   id        String  @id @default(uuid())
   user_id   String
-  quiz_id   String // refers to CourseMaterial of type quiz
+  quiz_id   String
   score     Float
   is_passed Boolean
 
   User UserShadow @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Quiz Quiz       @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
 
   @@map("employee_quiz_attempts")
 }
@@ -95,17 +152,17 @@ model AuditTemplate {
 }
 
 model AuditChecklist {
-  id            String          @id @default(uuid())
+  id            String         @id @default(uuid())
   template_id   String
   question_text String
-  Template      AuditTemplate   @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  Template      AuditTemplate  @relation(fields: [template_id], references: [id], onDelete: Cascade)
   Findings      AuditFinding[]
 
   @@map("audit_checklists")
 }
 
 model AuditInspection {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   auditor_id  String // bisa referensi ke UserShadow jika auditor ada di sana
   division_id String
   status      String // 'draft' | 'submitted' | 'approved'
@@ -116,14 +173,14 @@ model AuditInspection {
 }
 
 model AuditFinding {
-  id               String          @id @default(uuid())
+  id               String   @id @default(uuid())
   inspection_id    String
   checklist_id     String
   notes            String?
   photo_path       String? // local & remote S3 URL
   is_compliant     Boolean
-  sync_status      String          @default("pending") // pending/syncing/synced/failed
-  last_modified_at DateTime        @default(now()) @updatedAt
+  sync_status      String   @default("pending") // pending/syncing/synced/failed
+  last_modified_at DateTime @default(now()) @updatedAt
 
   Inspection AuditInspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
   Checklist  AuditChecklist  @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
