@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #419CC3;
+  --color-secondary: #89B4E1;
+  --color-tertiary: #FFFFFF;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-text-main: #1E293B;
+
+  --font-sans: 'Inter', 'Roboto', sans-serif;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--color-tertiary);
+    color: var(--color-text-main);
+}
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    display: inline-block;
+    vertical-align: middle;
+}
+.input-focus-ring:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(65, 156, 195, 0.2);
+    outline: none;
+}
+.login-card-shadow {
+    box-shadow: 0px 10px 15px -3px rgba(0,0,0,0.08), 0px 4px 6px -2px rgba(0,0,0,0.05);
+}

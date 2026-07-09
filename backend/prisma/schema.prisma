@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// A. Master Data (Sync from HRIS)
+
+model UserShadow {
+  id             String                   @id @default(uuid())
+  hris_user_id   String                   @unique
+  full_name      String
+  email          String                   @unique
+  CourseProgress EmployeeCourseProgress[]
+  QuizAttempts   EmployeeQuizAttempt[]
+
+  @@map("users_shadow")
+}
+
+model DivisionShadow {
+  id               String            @id @default(uuid())
+  hris_division_id String            @unique
+  name             String
+  Inspections      AuditInspection[]
+
+  @@map("divisions_shadow")
+}
+
+// B. LMS Tables
+
+model Course {
+  id             String                   @id @default(uuid())
+  title          String
+  description    String?
+  thumbnail_url  String?
+  Materials      CourseMaterial[]
+  CourseProgress EmployeeCourseProgress[]
+
+  @@map("courses")
+}
+
+model CourseMaterial {
+  id            String  @id @default(uuid())
+  course_id     String
+  type          String // 'pdf' | 'quiz'
+  content_url   String? // Pre-signed URL or S3 key
+  min_read_time Int? // in seconds
+
+  Course Course @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@map("course_materials")
+}
+
+model EmployeeCourseProgress {
+  id        String @id @default(uuid())
+  user_id   String
+  course_id String
+  status    String // 'enrolled' | 'completed'
+
+  User   UserShadow @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  Course Course     @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@map("employee_course_progress")
+}
+
+model EmployeeQuizAttempt {
+  id        String  @id @default(uuid())
+  user_id   String
+  quiz_id   String // refers to CourseMaterial of type quiz
+  score     Float
+  is_passed Boolean
+
+  User UserShadow @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("employee_quiz_attempts")
+}
+
+// C. Audit Tables
+
+model AuditTemplate {
+  id         String           @id @default(uuid())
+  title      String
+  version    Int
+  Checklists AuditChecklist[]
+
+  @@map("audit_templates")
+}
+
+model AuditChecklist {
+  id            String          @id @default(uuid())
+  template_id   String
+  question_text String
+  Template      AuditTemplate   @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  Findings      AuditFinding[]
+
+  @@map("audit_checklists")
+}
+
+model AuditInspection {
+  id          String   @id @default(uuid())
+  auditor_id  String // bisa referensi ke UserShadow jika auditor ada di sana
+  division_id String
+  status      String // 'draft' | 'submitted' | 'approved'
+  Division    DivisionShadow @relation(fields: [division_id], references: [id])
+  Findings    AuditFinding[]
+
+  @@map("audit_inspections")
+}
+
+model AuditFinding {
+  id               String          @id @default(uuid())
+  inspection_id    String
+  checklist_id     String
+  notes            String?
+  photo_path       String? // local & remote S3 URL
+  is_compliant     Boolean
+  sync_status      String          @default("pending") // pending/syncing/synced/failed
+  last_modified_at DateTime        @default(now()) @updatedAt
+
+  Inspection AuditInspection @relation(fields: [inspection_id], references: [id], onDelete: Cascade)
+  Checklist  AuditChecklist  @relation(fields: [checklist_id], references: [id], onDelete: Cascade)
+
+  @@map("audit_findings")
+}
