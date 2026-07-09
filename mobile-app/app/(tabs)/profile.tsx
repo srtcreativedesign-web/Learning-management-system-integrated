@@ -1,61 +1,206 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+
+// Theme constants based on the provided HTML
+const COLORS = {
+  background: '#EFF4FF', // slightly blue background as requested
+  surface: '#FFFFFF',
+  primary: '#419CC3',
+  textMain: '#0B1C30',
+  textSecondary: '#3F484E',
+  border: 'rgba(190, 200, 206, 0.2)',
+  error: '#BA1A1A',
+};
 
 export default function ProfileScreen() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    // Navigate back to login
+    router.replace('/');
+  };
+
   return (
-    <ScrollView className="flex-1 bg-gray-50 p-4">
-      {/* Profile Card */}
-      <View className="bg-white rounded-xl p-6 border border-gray-100 mb-4 items-center">
-        <View className="w-20 h-20 bg-primary/10 rounded-full items-center justify-center mb-3">
-          <Text className="text-primary text-3xl font-bold">BS</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 100 }} // Extra padding for bottom navbar
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingTop: 32, paddingBottom: 24 }}>
+          <View style={{ position: 'relative', marginBottom: 24 }}>
+            <View style={{ 
+              width: 128, 
+              height: 128, 
+              borderRadius: 64, 
+              borderWidth: 4, 
+              borderColor: COLORS.surface, 
+              overflow: 'hidden',
+              elevation: 8,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+            }}>
+              <Image 
+                source={{ uri: 'https://i.pravatar.cc/300?img=11' }} 
+                style={{ width: '100%', height: '100%' }} 
+              />
+            </View>
+            <View style={{ 
+              position: 'absolute', 
+              bottom: 4, 
+              right: 4, 
+              backgroundColor: COLORS.primary, 
+              padding: 6, 
+              borderRadius: 20, 
+              borderWidth: 4, 
+              borderColor: '#E5EEFF',
+            }}>
+              <MaterialIcons name="verified" size={18} color="#FFFFFF" />
+            </View>
+          </View>
+          
+          <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.textMain, letterSpacing: -0.5 }}>Budi Santoso</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.primary, marginTop: 4 }}>Senior Auditor</Text>
+          <Text style={{ fontSize: 12, fontWeight: '500', color: COLORS.textSecondary, marginTop: 4, opacity: 0.8 }}>Departemen Kepatuhan & Jaminan Kualitas</Text>
         </View>
-        <Text className="text-lg font-bold text-text-main">Budi Santoso</Text>
-        <Text className="text-sm text-gray-500">budi.trainer@sobathr.com</Text>
-        <View className="bg-primary/10 px-4 py-1 rounded-full mt-2">
-          <Text className="text-primary text-xs font-semibold">Auditor Internal</Text>
-        </View>
-      </View>
 
-      {/* Stats */}
-      <View className="bg-white rounded-xl p-4 border border-gray-100 mb-4">
-        <Text className="font-bold text-text-main mb-3">Statistik Audit</Text>
-        <View className="flex-row justify-between mb-3">
-          <Text className="text-sm text-gray-500">Total Inspeksi</Text>
-          <Text className="font-semibold text-text-main">47</Text>
+        {/* Stats Section */}
+        <View style={{ flexDirection: 'row', paddingHorizontal: 24, gap: 16, marginBottom: 32 }}>
+          {/* Stat 1 */}
+          <View style={{ 
+            flex: 1, 
+            backgroundColor: COLORS.surface, 
+            padding: 24, 
+            borderRadius: 24, 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.4)'
+          }}>
+            <Text style={{ fontSize: 24, fontWeight: '600', color: COLORS.primary }}>124</Text>
+            <Text style={{ fontSize: 12, fontWeight: '500', color: COLORS.textSecondary, marginTop: 4 }}>Audit Selesai</Text>
+          </View>
+          {/* Stat 2 */}
+          <View style={{ 
+            flex: 1, 
+            backgroundColor: COLORS.surface, 
+            padding: 24, 
+            borderRadius: 24, 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.4)'
+          }}>
+            <Text style={{ fontSize: 24, fontWeight: '600', color: COLORS.primary }}>45</Text>
+            <Text style={{ fontSize: 12, fontWeight: '500', color: COLORS.textSecondary, marginTop: 4 }}>Total Outlet</Text>
+          </View>
         </View>
-        <View className="flex-row justify-between mb-3">
-          <Text className="text-sm text-gray-500">Temuan Ditemukan</Text>
-          <Text className="font-semibold text-text-main">23</Text>
-        </View>
-        <View className="flex-row justify-between mb-3">
-          <Text className="text-sm text-gray-500">Rata-rata Compliance</Text>
-          <Text className="font-semibold text-green-600">87%</Text>
-        </View>
-        <View className="flex-row justify-between">
-          <Text className="text-sm text-gray-500">Divisi</Text>
-          <Text className="font-semibold text-text-main">Training & Development</Text>
-        </View>
-      </View>
 
-      {/* Menu */}
-      <View className="bg-white rounded-xl border border-gray-100 mb-4">
-        <TouchableOpacity className="p-4 flex-row justify-between items-center border-b border-gray-50">
-          <Text className="text-text-main">📊  Laporan & Analisa</Text>
-          <Text className="text-gray-400">›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="p-4 flex-row justify-between items-center border-b border-gray-50">
-          <Text className="text-text-main">🏢  Pembagian Divisi</Text>
-          <Text className="text-gray-400">›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="p-4 flex-row justify-between items-center border-b border-gray-50">
-          <Text className="text-text-main">📋  Template Checklist</Text>
-          <Text className="text-gray-400">›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="p-4 flex-row justify-between items-center">
-          <Text className="text-red-500">🚪  Keluar</Text>
-          <Text className="text-gray-400">›</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        {/* Account Settings List */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 32 }}>
+          <Text style={{ fontSize: 20, fontWeight: '600', color: COLORS.textMain, marginBottom: 16, paddingHorizontal: 8, opacity: 0.9 }}>Pengaturan Akun</Text>
+          
+          <View style={{ 
+            backgroundColor: COLORS.surface, 
+            borderRadius: 24, 
+            overflow: 'hidden',
+            elevation: 4,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.4)'
+          }}>
+            {/* Menu Item 1 */}
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 24, borderBottomWidth: 1, borderBottomColor: COLORS.border }} activeOpacity={0.7}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(65, 156, 195, 0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 24 }}>
+                  <MaterialIcons name="person" size={24} color={COLORS.primary} />
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '500', color: COLORS.textMain }}>Informasi Pribadi</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#6F787E" />
+            </TouchableOpacity>
+
+            {/* Menu Item 2 */}
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 24, borderBottomWidth: 1, borderBottomColor: COLORS.border }} activeOpacity={0.7}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(65, 156, 195, 0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 24 }}>
+                  <MaterialIcons name="assignment-turned-in" size={24} color={COLORS.primary} />
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '500', color: COLORS.textMain }}>Spesialisasi Audit</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#6F787E" />
+            </TouchableOpacity>
+
+            {/* Menu Item 3 */}
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 24, borderBottomWidth: 1, borderBottomColor: COLORS.border }} activeOpacity={0.7}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(65, 156, 195, 0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 24 }}>
+                  <MaterialIcons name="notifications" size={24} color={COLORS.primary} />
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '500', color: COLORS.textMain }}>Notifikasi</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#6F787E" />
+            </TouchableOpacity>
+
+            {/* Menu Item 4 */}
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 24 }} activeOpacity={0.7}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(65, 156, 195, 0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 24 }}>
+                  <MaterialIcons name="security" size={24} color={COLORS.primary} />
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '500', color: COLORS.textMain }}>Keamanan</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#6F787E" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Action Section */}
+        <View style={{ paddingHorizontal: 24 }}>
+          <TouchableOpacity 
+            onPress={handleLogout}
+            activeOpacity={0.7}
+            style={{ 
+              width: '100%', 
+              paddingVertical: 24, 
+              backgroundColor: COLORS.surface, 
+              borderRadius: 24, 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: 'rgba(186, 26, 26, 0.2)',
+              elevation: 4,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+            }}
+          >
+            <MaterialIcons name="logout" size={20} color={COLORS.error} style={{ marginRight: 8 }} />
+            <Text style={{ color: COLORS.error, fontWeight: '600', fontSize: 14 }}>Keluar Akun</Text>
+          </TouchableOpacity>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
