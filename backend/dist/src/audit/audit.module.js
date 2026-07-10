@@ -10,13 +10,19 @@ exports.AuditModule = void 0;
 const common_1 = require("@nestjs/common");
 const template_controller_1 = require("./template.controller");
 const template_service_1 = require("./template.service");
+const checklist_controller_1 = require("./checklist/checklist.controller");
+const checklist_service_1 = require("./checklist/checklist.service");
+const outlet_controller_1 = require("./outlet/outlet.controller");
+const outlet_service_1 = require("./outlet/outlet.service");
+const axios_1 = require("@nestjs/axios");
 let AuditModule = class AuditModule {
 };
 exports.AuditModule = AuditModule;
 exports.AuditModule = AuditModule = __decorate([
     (0, common_1.Module)({
-        controllers: [template_controller_1.TemplateController],
-        providers: [template_service_1.TemplateService]
+        imports: [axios_1.HttpModule],
+        controllers: [template_controller_1.TemplateController, checklist_controller_1.ChecklistController, outlet_controller_1.OutletController],
+        providers: [template_service_1.TemplateService, checklist_service_1.ChecklistService, outlet_service_1.OutletService]
     })
 ], AuditModule);
 //# sourceMappingURL=audit.module.js.map

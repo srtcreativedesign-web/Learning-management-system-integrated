@@ -5,22 +5,92 @@ export declare class CourseService {
     constructor(prisma: PrismaClient);
     create(dto: CreateCourseDto): Promise<{
         id: string;
-        description: string | null;
         title: string;
+        description: string | null;
         thumbnail_url: string | null;
+        reward_points: number;
+        due_date: Date | null;
     }>;
     findAll(): Promise<({
-        Materials: {
+        Materials: ({
+            Quiz: ({
+                Questions: ({
+                    Options: {
+                        id: string;
+                        question_id: string;
+                        option_text: string;
+                        is_correct: boolean;
+                    }[];
+                } & {
+                    id: string;
+                    type: string;
+                    quiz_id: string;
+                    question_text: string;
+                })[];
+            } & {
+                id: string;
+                passing_score: number;
+                certificate_template_id: string | null;
+                course_material_id: string;
+            }) | null;
+        } & {
             id: string;
             type: string;
-            course_id: string;
             content_url: string | null;
             min_read_time: number | null;
-        }[];
+            course_id: string;
+        })[];
     } & {
         id: string;
-        description: string | null;
         title: string;
+        description: string | null;
         thumbnail_url: string | null;
+        reward_points: number;
+        due_date: Date | null;
     })[]>;
+    findOne(id: string): Promise<({
+        Materials: ({
+            Quiz: ({
+                Questions: ({
+                    Options: {
+                        id: string;
+                        question_id: string;
+                        option_text: string;
+                        is_correct: boolean;
+                    }[];
+                } & {
+                    id: string;
+                    type: string;
+                    quiz_id: string;
+                    question_text: string;
+                })[];
+            } & {
+                id: string;
+                passing_score: number;
+                certificate_template_id: string | null;
+                course_material_id: string;
+            }) | null;
+        } & {
+            id: string;
+            type: string;
+            content_url: string | null;
+            min_read_time: number | null;
+            course_id: string;
+        })[];
+    } & {
+        id: string;
+        title: string;
+        description: string | null;
+        thumbnail_url: string | null;
+        reward_points: number;
+        due_date: Date | null;
+    }) | null>;
+    update(id: string, dto: any): Promise<{
+        id: string;
+        title: string;
+        description: string | null;
+        thumbnail_url: string | null;
+        reward_points: number;
+        due_date: Date | null;
+    }>;
 }

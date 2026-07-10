@@ -10,11 +10,13 @@ exports.SyncModule = void 0;
 const common_1 = require("@nestjs/common");
 const sync_controller_1 = require("./sync.controller");
 const sync_service_1 = require("./sync.service");
+const axios_1 = require("@nestjs/axios");
 let SyncModule = class SyncModule {
 };
 exports.SyncModule = SyncModule;
 exports.SyncModule = SyncModule = __decorate([
     (0, common_1.Module)({
+        imports: [axios_1.HttpModule],
         controllers: [sync_controller_1.SyncController],
         providers: [sync_service_1.SyncService]
     })

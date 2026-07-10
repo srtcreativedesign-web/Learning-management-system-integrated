@@ -4,9 +4,9 @@ export declare class QuizService {
     constructor(prisma: PrismaClient);
     createQuiz(data: any): Promise<{
         id: string;
-        course_material_id: string;
         passing_score: number;
         certificate_template_id: string | null;
+        course_material_id: string;
     }>;
     getQuizByMaterialId(materialId: string): Promise<{
         Questions: ({
@@ -23,9 +23,9 @@ export declare class QuizService {
         })[];
     } & {
         id: string;
-        course_material_id: string;
         passing_score: number;
         certificate_template_id: string | null;
+        course_material_id: string;
     }>;
     submitQuiz(quizId: string, payload: {
         user_id: string;

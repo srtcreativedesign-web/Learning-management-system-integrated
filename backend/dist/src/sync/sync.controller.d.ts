@@ -15,4 +15,14 @@ export declare class SyncController {
         hris_division_id: string;
         name: string;
     }>;
+    syncEmployeesFromHRIS(): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    getEmployees(): Promise<{
+        id: string;
+        hris_user_id: string;
+        email: string;
+        full_name: string;
+    }[]>;
 }

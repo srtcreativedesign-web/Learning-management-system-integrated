@@ -29,6 +29,12 @@ let SyncController = class SyncController {
     async syncDivision(dto) {
         return this.syncService.syncDivision(dto);
     }
+    async syncEmployeesFromHRIS() {
+        return this.syncService.syncEmployeesFromHRIS();
+    }
+    async getEmployees() {
+        return this.syncService.getEmployees();
+    }
 };
 exports.SyncController = SyncController;
 __decorate([
@@ -49,6 +55,21 @@ __decorate([
     __metadata("design:paramtypes", [sync_division_dto_1.SyncDivisionDto]),
     __metadata("design:returntype", Promise)
 ], SyncController.prototype, "syncDivision", null);
+__decorate([
+    (0, common_1.Post)('employees/sync-hris'),
+    (0, swagger_1.ApiOperation)({ summary: 'Pull employee data from HRIS API' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Employee data pulled successfully.' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SyncController.prototype, "syncEmployeesFromHRIS", null);
+__decorate([
+    (0, common_1.Get)('employees'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all synced employees' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SyncController.prototype, "getEmployees", null);
 exports.SyncController = SyncController = __decorate([
     (0, swagger_1.ApiTags)('Sync (Webhook)'),
     (0, common_1.Controller)('sync'),

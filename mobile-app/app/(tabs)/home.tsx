@@ -18,8 +18,11 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.surface, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
       {/* Top NavBar */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-        <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.primary }}>SobatHR</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 20, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+        <View>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.primary }}>TND SYSTEM</Text>
+          <Text style={{ color: COLORS.textLight, marginTop: 4 }}>Selamat datang kembali, Budi!</Text>
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity style={{ marginRight: 16 }}>
             <MaterialIcons name="notifications" size={24} color={COLORS.textSecondary} />

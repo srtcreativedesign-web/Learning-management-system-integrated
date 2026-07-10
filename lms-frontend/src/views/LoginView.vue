@@ -37,7 +37,7 @@ const handleLogin = () => {
       <div class="mb-4 flex items-center justify-center w-16 h-16 bg-primary/10 rounded-lg">
         <span class="material-symbols-outlined text-primary text-[32px]">corporate_fare</span>
       </div>
-      <h1 class="text-2xl font-bold text-primary tracking-tight">SobatHR</h1>
+      <h1 class="text-2xl font-bold text-primary tracking-tight">TND SYSTEM</h1>
       <p class="text-sm text-text-main/70 mt-1">Kelola masa depan SDM Anda hari ini</p>
     </div>
 

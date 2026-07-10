@@ -34,6 +34,21 @@ model DivisionShadow {
   @@map("divisions_shadow")
 }
 
+model Outlet {
+  id          String  @id @default(uuid())
+  hris_id     Int     @unique // Mapping to organization.id from HRIS
+  name        String
+  address     String? @db.Text
+  latitude    String?
+  longitude   String?
+  device_id   Int?    // From outlet_devices.id
+  device_code String? // From outlet_devices.device_code
+  device_name String? // From outlet_devices.device_name
+  status      String  @default("active") // From outlet_devices.status
+
+  @@map("outlets")
+}
+
 // B. LMS Tables
 
 model Course {
@@ -41,6 +56,8 @@ model Course {
   title          String
   description    String?
   thumbnail_url  String?
+  reward_points  Int                      @default(0)
+  due_date       DateTime?
   Materials      CourseMaterial[]
   CourseProgress EmployeeCourseProgress[]
 
@@ -170,6 +187,27 @@ model AuditInspection {
   Findings    AuditFinding[]
 
   @@map("audit_inspections")
+}
+
+model AuditCategory {
+  id         String @id @default(uuid())
+  name       String
+  sort_order Int    @default(0)
+
+  checklists AuditChecklistPoint[]
+
+  @@map("audit_categories")
+}
+
+model AuditChecklistPoint {
+  id          String @id @default(uuid())
+  category_id String
+  question    String
+  sort_order  Int    @default(0)
+
+  category AuditCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@map("audit_checklist_points")
 }
 
 model AuditFinding {

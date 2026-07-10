@@ -12,10 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SyncService = void 0;
 const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
+const axios_1 = require("@nestjs/axios");
+const rxjs_1 = require("rxjs");
 let SyncService = class SyncService {
     prisma;
-    constructor(prisma) {
+    httpService;
+    constructor(prisma, httpService) {
         this.prisma = prisma;
+        this.httpService = httpService;
     }
     async syncUser(dto) {
         return this.prisma.userShadow.upsert({
@@ -43,10 +47,46 @@ let SyncService = class SyncService {
             },
         });
     }
+    async syncEmployeesFromHRIS() {
+        const hrisUrl = (process.env.HRIS_BASE_URL || 'http://localhost:8000') + '/api/v1/lms/employees';
+        try {
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(hrisUrl));
+            if (!response.data || !response.data.success || !response.data.data) {
+                throw new Error('Invalid response format from HRIS');
+            }
+            const employees = response.data.data;
+            let syncedCount = 0;
+            for (const emp of employees) {
+                await this.prisma.userShadow.upsert({
+                    where: { hris_user_id: String(emp.id) },
+                    update: {
+                        full_name: emp.name,
+                        email: emp.email,
+                    },
+                    create: {
+                        hris_user_id: String(emp.id),
+                        full_name: emp.name,
+                        email: emp.email,
+                    },
+                });
+                syncedCount++;
+            }
+            return { success: true, message: `Successfully synced ${syncedCount} employees from HRIS.` };
+        }
+        catch (error) {
+            throw new Error('Sync failed: ' + error.message);
+        }
+    }
+    async getEmployees() {
+        return this.prisma.userShadow.findMany({
+            orderBy: { full_name: 'asc' },
+        });
+    }
 };
 exports.SyncService = SyncService;
 exports.SyncService = SyncService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [client_1.PrismaClient])
+    __metadata("design:paramtypes", [client_1.PrismaClient,
+        axios_1.HttpService])
 ], SyncService);
 //# sourceMappingURL=sync.service.js.map

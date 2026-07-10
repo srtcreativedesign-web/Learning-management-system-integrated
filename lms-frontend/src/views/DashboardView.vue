@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Bar, Line } from 'vue-chartjs';
 import { 
   Chart as ChartJS, 
@@ -12,6 +12,8 @@ import {
   PointElement, 
   LineElement 
 } from 'chart.js';
+import AppSidebar from '@/components/layout/AppSidebar.vue';
+import gsap from 'gsap';
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, PointElement, LineElement);
 
@@ -75,78 +77,113 @@ const crewRank = ref([
   { id: 3, name: 'Andi Wijaya', points: 950, badge: 'Bronze' },
   { id: 4, name: 'Rina Kusuma', points: 800, badge: 'Participant' },
 ]);
+
+// Chart Data: Top Compliance (Audit)
+const complianceChartData = ref({
+  labels: ['Sudirman', 'Kemang', 'Kelapa Gading', 'Bintaro', 'PIK'],
+  datasets: [
+    {
+      label: 'Tingkat Kepatuhan (%)',
+      backgroundColor: '#A5D6A7', // Soft Green
+      borderRadius: 4,
+      data: [98, 95, 94, 91, 89]
+    }
+  ]
+});
+
+const complianceChartOptions = ref({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: { y: { beginAtZero: true, max: 100 } }
+});
+
+// Chart Data: Most Findings (Audit)
+const findingsChartData = ref({
+  labels: ['Depok', 'Bekasi', 'Tangerang', 'Bogor', 'Cibubur'],
+  datasets: [
+    {
+      label: 'Jumlah Temuan (NOK)',
+      backgroundColor: '#EF9A9A', // Soft Red
+      borderRadius: 4,
+      data: [24, 19, 15, 12, 10]
+    }
+  ]
+});
+
+const findingsChartOptions = ref({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: { y: { beginAtZero: true } }
+});
+
+// Chart Data: Modul Performance (Horizontal Bar)
+const moduleChartData = ref({
+  labels: ['M1: Pengenalan', 'M2: Visi & Misi', 'M3: SOP Kerja', 'M4: K3 Dasar'],
+  datasets: [{
+    label: 'Rata-rata Nilai',
+    backgroundColor: '#419CC3',
+    borderRadius: 4,
+    barPercentage: 0.6,
+    data: [92, 88, 76, 85]
+  }]
+});
+
+const moduleChartOptions = ref({
+  indexAxis: 'y', // Makes it horizontal
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: { 
+    x: { beginAtZero: true, max: 100 },
+    y: { grid: { display: false } }
+  }
+});
+
+// GSAP Stagger Animation on Mount
+onMounted(() => {
+  gsap.from('.gsap-card', {
+    y: 30,
+    opacity: 0,
+    duration: 0.6,
+    stagger: 0.1,
+    ease: 'power2.out'
+  });
+});
 </script>
 
 <template>
-  <div class="flex h-screen bg-gray-50 overflow-hidden font-sans">
+  <div class="flex h-screen bg-gray-50 overflow-hidden font-sans text-sm">
     
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex">
-      <div class="p-6 border-b border-gray-100 flex items-center gap-3">
-        <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-          <span class="material-symbols-outlined text-primary">corporate_fare</span>
-        </div>
-        <div>
-          <h1 class="font-bold text-lg text-primary tracking-tight">SobatHR</h1>
-          <p class="text-xs text-text-main/60">Instruktur Panel</p>
-        </div>
-      </div>
-      
-      <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary font-bold transition-colors">
-          <span class="material-symbols-outlined">dashboard</span>
-          Beranda Dasbor
-        </a>
-        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-main/70 hover:bg-gray-50 font-medium transition-colors">
-          <span class="material-symbols-outlined">school</span>
-          Manajemen Kursus
-        </a>
-        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-main/70 hover:bg-gray-50 font-medium transition-colors">
-          <span class="material-symbols-outlined">description</span>
-          Pustaka Materi
-        </a>
-        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-main/70 hover:bg-gray-50 font-medium transition-colors">
-          <span class="material-symbols-outlined">group</span>
-          Data Peserta
-        </a>
-      </nav>
-      
-      <!-- Current User Profile in Sidebar -->
-      <div class="p-4 border-t border-gray-100">
-        <div class="flex items-center gap-3 px-2 py-2">
-          <div class="w-10 h-10 rounded-full bg-secondary text-white flex items-center justify-center font-bold">
-            B
-          </div>
-          <div>
-            <p class="text-sm font-bold text-text-main">Halo, Budi!</p>
-            <p class="text-xs text-text-main/60">Instruktur Utama</p>
-          </div>
-        </div>
-      </div>
-    </aside>
+    <!-- Sidebar Component -->
+    <AppSidebar />
 
     <!-- Main Content Area -->
     <main class="flex-1 overflow-y-auto bg-gray-50/50">
       
       <!-- Top Mobile Nav (Hidden on Desktop) -->
       <div class="md:hidden bg-white p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 z-10">
-        <h1 class="font-bold text-primary">SobatHR Trainer</h1>
+        <h1 class="font-bold text-primary">TND SYSTEM</h1>
         <div class="w-8 h-8 rounded-full bg-secondary text-white flex items-center justify-center font-bold text-sm">B</div>
       </div>
 
       <div class="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
         
         <!-- Welcome Header -->
-        <div>
-          <h2 class="text-2xl font-bold text-text-main">Dasbor Instruktur</h2>
+        <div class="gsap-card">
+          <h2 class="text-xl font-bold text-text-main">Dasbor Instruktur</h2>
           <p class="text-sm text-text-main/70 mt-1">Pantau perkembangan peserta dan efektivitas kelas Anda bulan ini.</p>
         </div>
 
         <!-- Top Row: Active Course & Crew Rank -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          <!-- Active Course Card (Spans 2 columns on lg) -->
-          <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <!-- Left Content Area (Spans 2 columns) -->
+          <div class="lg:col-span-2 flex flex-col gap-6">
+            
+            <!-- Active Course Card -->
+            <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <h3 class="text-sm font-bold text-text-main/70 uppercase tracking-wider mb-4">Kelas Sedang Berjalan (Batch Aktif)</h3>
             
             <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
@@ -154,31 +191,56 @@ const crewRank = ref([
                 <span class="material-symbols-outlined text-primary text-4xl">cast_for_education</span>
               </div>
               <div class="flex-1 w-full">
-                <h4 class="text-xl font-bold text-text-main">Orientasi Karyawan Baru - Batch Juli</h4>
-                <p class="text-sm text-text-main/70 mb-4">Terdapat 45 peserta yang sedang mengikuti kelas ini.</p>
+                <h4 class="text-xl font-bold text-text-main mb-2">Orientasi Karyawan Baru - Batch Juli</h4>
+                
+                <!-- Info Badges to fill space -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                  <span class="bg-blue-50 text-primary px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1">
+                    <i class="pi pi-desktop text-[10px]"></i> Online Course
+                  </span>
+                  <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1">
+                    <i class="pi pi-users text-[10px]"></i> 45 Peserta Terdaftar
+                  </span>
+                  <span class="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1">
+                    <i class="pi pi-clock text-[10px]"></i> Sisa 3 Hari
+                  </span>
+                </div>
                 
                 <!-- Progress Bar (Passing Rate) -->
                 <div class="flex items-center justify-between text-sm font-medium mb-2">
-                  <span class="text-text-main">Tingkat Kelulusan Sementara</span>
-                  <span class="text-primary">60%</span>
+                  <span class="text-text-main text-xs">Progress Kelulusan Peserta</span>
+                  <span class="text-primary font-bold">60% (27/45 Lulus)</span>
                 </div>
-                <div class="w-full h-2 bg-secondary/30 rounded-full overflow-hidden">
+                <div class="w-full h-2.5 bg-secondary/20 rounded-full overflow-hidden">
                   <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: 60%"></div>
                 </div>
               </div>
-              <div class="w-full md:w-auto mt-4 md:mt-0 flex gap-2">
-                <button class="w-full md:w-auto px-6 py-3 bg-white border border-gray-200 text-text-main text-sm font-bold rounded-lg hover:bg-gray-50 transition-all shadow-sm whitespace-nowrap">
-                  Beri Nilai
+              <div class="w-full md:w-auto mt-4 md:mt-0 flex flex-col gap-2 border-l border-gray-100 pl-6 ml-2">
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center">Tindakan</p>
+                <button class="w-full md:w-auto px-6 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 transition-all shadow-sm whitespace-nowrap flex items-center justify-center gap-2">
+                  <i class="pi pi-star text-amber-500"></i> Beri Nilai
                 </button>
-                <button class="w-full md:w-auto px-6 py-3 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 transition-all shadow-sm whitespace-nowrap">
-                  Kelola Kelas
+                <button class="w-full md:w-auto px-6 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 transition-all shadow-sm whitespace-nowrap flex items-center justify-center gap-2">
+                  <i class="pi pi-cog"></i> Kelola Kelas
                 </button>
               </div>
             </div>
+            </div>
+            
+            <!-- Module Performance Chart (Fills the empty space) -->
+            <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <i class="pi pi-chart-bar"></i> Performa per Modul (Kelas Aktif)
+              </h3>
+              <div class="h-40">
+                <Bar :data="moduleChartData" :options="moduleChartOptions" />
+              </div>
+            </div>
+
           </div>
 
           <!-- Crew Rank Leaderboard -->
-          <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm h-full flex flex-col">
             <h3 class="text-sm font-bold text-text-main/70 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
               Papan Peringkat Peserta
@@ -207,13 +269,17 @@ const crewRank = ref([
                 </div>
               </div>
             </div>
+            
+            <div class="mt-auto pt-4 border-t border-gray-100">
+              <button class="w-full text-center text-sm font-bold text-primary hover:underline">Lihat Semua Peringkat</button>
+            </div>
           </div>
         </div>
 
         <!-- Middle Row: Analytics Charts -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Pre/Post Test Chart -->
-          <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <h3 class="text-sm font-bold text-text-main/70 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">bar_chart</span>
               Rata-rata Nilai Ujian (Pre vs Post)
@@ -224,7 +290,7 @@ const crewRank = ref([
           </div>
 
           <!-- Participants Line Chart -->
-          <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <h3 class="text-sm font-bold text-text-main/70 uppercase tracking-wider mb-4 flex items-center gap-2">
               <span class="material-symbols-outlined text-[18px]">show_chart</span>
               Laju Kelulusan Peserta
@@ -235,8 +301,33 @@ const crewRank = ref([
           </div>
         </div>
 
+        <!-- Third Row: Audit Analytics Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Top Compliance Chart -->
+          <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <h3 class="text-sm font-bold text-text-main/70 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="pi pi-verified text-green-500"></i>
+              Top 5 Outlet - Kepatuhan Tertinggi
+            </h3>
+            <div class="h-64">
+              <Bar :data="complianceChartData" :options="complianceChartOptions" />
+            </div>
+          </div>
+
+          <!-- Most Findings Chart -->
+          <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <h3 class="text-sm font-bold text-text-main/70 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <i class="pi pi-exclamation-circle text-red-400"></i>
+              Top 5 Outlet - Temuan Terbanyak
+            </h3>
+            <div class="h-64">
+              <Bar :data="findingsChartData" :options="findingsChartOptions" />
+            </div>
+          </div>
+        </div>
+
         <!-- Bottom Row: Pustaka Materi -->
-        <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <div class="gsap-card bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-sm font-bold text-text-main/70 uppercase tracking-wider">Materi Terbaru yang Diunggah</h3>
             <a href="#" class="text-sm font-medium text-primary hover:underline">Lihat Semua</a>

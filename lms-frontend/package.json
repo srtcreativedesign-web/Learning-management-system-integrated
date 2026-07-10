@@ -17,7 +17,10 @@
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
     "@primevue/themes": "^4.5.4",
+    "@vueuse/core": "^14.3.0",
+    "@vueuse/motion": "^3.0.3",
     "chart.js": "^4.5.1",
+    "gsap": "^3.15.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",

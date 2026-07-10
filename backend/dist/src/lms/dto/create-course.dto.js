@@ -15,6 +15,9 @@ class CreateCourseDto {
     title;
     description;
     thumbnail_url;
+    reward_points;
+    due_date;
+    materials;
 }
 exports.CreateCourseDto = CreateCourseDto;
 __decorate([
@@ -29,4 +32,16 @@ __decorate([
     (0, swagger_1.ApiPropertyOptional)({ example: 'https://dummyimage.com/600x400/000/fff' }),
     __metadata("design:type", String)
 ], CreateCourseDto.prototype, "thumbnail_url", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 100 }),
+    __metadata("design:type", Number)
+], CreateCourseDto.prototype, "reward_points", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    __metadata("design:type", Date)
+], CreateCourseDto.prototype, "due_date", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    __metadata("design:type", Array)
+], CreateCourseDto.prototype, "materials", void 0);
 //# sourceMappingURL=create-course.dto.js.map
