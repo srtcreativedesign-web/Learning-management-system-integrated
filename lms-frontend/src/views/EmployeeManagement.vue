@@ -12,7 +12,7 @@ const syncing = ref(false);
 const fetchEmployees = async () => {
   loading.value = true;
   try {
-    const res = await fetch('http://localhost:3000/sync/employees');
+    const res = await fetch('http://localhost:3001/sync/employees');
     if (res.ok) {
       employees.value = await res.json();
     }
@@ -26,7 +26,7 @@ const fetchEmployees = async () => {
 const syncHRIS = async () => {
   syncing.value = true;
   try {
-    const res = await fetch('http://localhost:3000/sync/employees/sync-hris', { method: 'POST' });
+    const res = await fetch('http://localhost:3001/sync/employees/sync-hris', { method: 'POST' });
     const data = await res.json();
     if (res.ok && data.success) {
       alert(data.message);
@@ -78,6 +78,11 @@ onMounted(() => {
             <Column field="hris_user_id" header="ID (HRIS)" sortable></Column>
             <Column field="full_name" header="Nama Karyawan" sortable></Column>
             <Column field="email" header="Email"></Column>
+            <Column field="join_date" header="Tanggal Bergabung" sortable>
+              <template #body="{ data }">
+                {{ data.join_date ? new Date(data.join_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-' }}
+              </template>
+            </Column>
           </DataTable>
         </div>
       </div>

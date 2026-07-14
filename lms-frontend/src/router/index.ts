@@ -60,6 +60,16 @@ const router = createRouter({
       component: () => import('../views/analytics/AuditAnalytics.vue'),
     },
     {
+      path: '/analytics/quiz-history',
+      name: 'analytics-quiz-history',
+      component: () => import('../views/analytics/QuizHistoryView.vue'),
+    },
+    {
+      path: '/analytics/leaderboard',
+      name: 'analytics-leaderboard',
+      component: () => import('../views/analytics/LeaderboardView.vue'),
+    },
+    {
       path: '/library',
       name: 'library',
       component: () => import('../views/LibraryView.vue'),
@@ -73,6 +83,16 @@ const router = createRouter({
       path: '/library/generate-quiz',
       name: 'library-generate-quiz',
       component: () => import('../views/LibraryQuizGenerate.vue'),
+    },
+    {
+      path: '/sop/management',
+      name: 'sop-management',
+      component: () => import('../views/sop/SopManagement.vue'),
+    },
+    {
+      path: '/sop/viewer',
+      name: 'sop-viewer',
+      component: () => import('../views/sop/SopViewer.vue'),
     },
   ],
 })

@@ -13,6 +13,8 @@ import FileUpload from 'primevue/fileupload';
 const router = useRouter();
 
 const materials = ref([]);
+const quizzes = ref([]);
+const activeTab = ref('materi');
 const searchQuery = ref('');
 const syncing = ref(false);
 const loading = ref(false);
@@ -32,7 +34,7 @@ const uploadedFileUrl = ref('');
 const fetchMaterials = async () => {
   loading.value = true;
   try {
-    const res = await fetch('http://localhost:3000/lms/courses');
+    const res = await fetch('http://localhost:3001/lms/courses');
     if (res.ok) {
       materials.value = await res.json();
     }
@@ -41,6 +43,28 @@ const fetchMaterials = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const fetchQuizzes = async () => {
+  loading.value = true;
+  try {
+    const res = await fetch('http://localhost:3001/api/gamification/all'); // wait, the route is /quizzes/all not gamification
+    // let me fix the URL
+    const resQuiz = await fetch('http://localhost:3001/quizzes/all');
+    if (resQuiz.ok) {
+      quizzes.value = await resQuiz.json();
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const switchTab = (tab: string) => {
+  activeTab.value = tab;
+  if (tab === 'materi') fetchMaterials();
+  if (tab === 'kuis') fetchQuizzes();
 };
 
 const openCreateModal = () => {
@@ -95,8 +119,8 @@ const saveMaterial = async () => {
 
   try {
     const url = isEdit.value 
-      ? `http://localhost:3000/lms/courses/${currentId.value}`
-      : 'http://localhost:3000/lms/courses';
+      ? `http://localhost:3001/lms/courses/${currentId.value}`
+      : 'http://localhost:3001/lms/courses';
       
     const method = isEdit.value ? 'PATCH' : 'POST';
 
@@ -155,10 +179,25 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Grid of Materials -->
+        <!-- Tabs Navigation -->
+        <div class="flex gap-4 border-b border-gray-200">
+          <button @click="switchTab('materi')" 
+            :class="activeTab === 'materi' ? 'border-primary text-primary font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+            class="pb-3 border-b-2 transition-colors px-1 text-base">
+            Pustaka Materi
+          </button>
+          <button @click="switchTab('kuis')" 
+            :class="activeTab === 'kuis' ? 'border-primary text-primary font-bold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+            class="pb-3 border-b-2 transition-colors px-1 text-base flex items-center gap-2">
+            Manajemen Kuis
+          </button>
+        </div>
+
         <div v-if="loading" class="text-center py-10"><i class="pi pi-spin pi-spinner text-3xl text-primary"></i></div>
         
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- MATERI TAB -->
+        <div v-else-if="activeTab === 'materi'">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           <Card v-for="item in materials" :key="item.id" class="overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_20px_40px_rgb(65,156,195,0.15)] transition-all duration-500 rounded-2xl bg-white group hover:-translate-y-1">
             <template #header>
               <div class="h-48 overflow-hidden relative">
@@ -198,13 +237,50 @@ onMounted(() => {
           </Card>
         </div>
 
-        <!-- Empty State -->
-        <div v-if="materials.length === 0 && !loading" class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 flex flex-col items-center justify-center text-center">
-          <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-            <i class="pi pi-folder-open text-3xl text-gray-400"></i>
+          <div v-if="materials.length === 0 && !loading" class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 flex flex-col items-center justify-center text-center">
+            <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+              <i class="pi pi-folder-open text-3xl text-gray-400"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800">Belum ada materi</h3>
+            <p class="text-gray-500 max-w-md mx-auto mt-2">Klik tombol "Buat Baru" untuk mengunggah PDF/Video Pelatihan.</p>
           </div>
-          <h3 class="text-lg font-bold text-gray-800">Belum ada materi</h3>
-          <p class="text-gray-500 max-w-md mx-auto mt-2">Klik tombol "Buat Baru" untuk mengunggah PDF/Video Pelatihan.</p>
+        </div>
+
+        <!-- KUIS TAB -->
+        <div v-else-if="activeTab === 'kuis'">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card v-for="q in quizzes" :key="q.id" class="border-none shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl bg-white">
+              <template #title>
+                <div class="text-xl font-bold text-slate-800 line-clamp-2">
+                  Kuis: {{ q.Material?.Course?.title || 'Unknown' }}
+                </div>
+              </template>
+              <template #subtitle>
+                <span class="text-sm font-medium text-slate-500">Nilai Kelulusan: <strong class="text-primary">{{ q.passing_score }}</strong></span>
+              </template>
+              <template #content>
+                <div class="flex gap-4 mt-2">
+                  <div class="text-center p-3 bg-gray-50 rounded-lg flex-1">
+                    <p class="text-xl font-bold text-slate-800">{{ q._count?.Questions || 0 }}</p>
+                    <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Soal</p>
+                  </div>
+                  <div class="text-center p-3 bg-gray-50 rounded-lg flex-1">
+                    <p class="text-xl font-bold text-slate-800">{{ q._count?.EmployeeQuizAttempts || 0 }}</p>
+                    <p class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Peserta</p>
+                  </div>
+                </div>
+              </template>
+              <template #footer>
+                <div class="flex gap-2 mt-4">
+                  <Button icon="pi pi-pencil" label="Edit Soal" severity="secondary" class="flex-1 text-sm" outlined />
+                </div>
+              </template>
+            </Card>
+          </div>
+          
+          <div v-if="quizzes.length === 0 && !loading" class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center mt-4">
+            <p class="text-gray-500">Belum ada Kuis yang di-generate.</p>
+          </div>
         </div>
 
       </div>
@@ -236,7 +312,7 @@ onMounted(() => {
         <FileUpload 
           mode="basic" 
           name="file" 
-          url="http://localhost:3000/lms/courses/upload" 
+          url="http://localhost:3001/lms/courses/upload" 
           accept="application/pdf,video/*" 
           auto
           @upload="onUpload" 

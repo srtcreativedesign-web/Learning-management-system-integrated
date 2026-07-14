@@ -25,7 +25,7 @@ const generateQuiz = async () => {
   try {
     const payload: any = { materialText: materialText.value };
 
-    const res = await fetch('http://localhost:3000/quizzes/generate', {
+    const res = await fetch('http://localhost:3001/quizzes/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -52,7 +52,7 @@ const saveQuiz = async () => {
   if (!courseId) return alert('ID Course tidak ditemukan');
 
   try {
-    const res = await fetch(`http://localhost:3000/lms/courses/${courseId}`);
+    const res = await fetch(`http://localhost:3001/lms/courses/${courseId}`);
     const course = await res.json();
     const materialId = course.Materials?.[0]?.id;
     if (!materialId) return alert('Materi belum dilampirkan, harap lengkapi PDF/Video terlebih dahulu');
@@ -70,7 +70,7 @@ const saveQuiz = async () => {
       }))
     };
 
-    const saveRes = await fetch('http://localhost:3000/quizzes', {
+    const saveRes = await fetch('http://localhost:3001/quizzes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -99,7 +99,7 @@ onMounted(async () => {
   if (courseId) {
     materialText.value = 'Sedang mengekstrak teks asli dari PDF... Mohon tunggu...';
     try {
-      const res = await fetch(`http://localhost:3000/quizzes/extract-pdf/${courseId}`);
+      const res = await fetch(`http://localhost:3001/quizzes/extract-pdf/${courseId}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.text) {

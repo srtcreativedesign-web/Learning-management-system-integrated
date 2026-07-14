@@ -10,7 +10,7 @@ const isLoading = ref(true);
 const fetchChecklists = async () => {
   isLoading.value = true;
   try {
-    const res = await fetch('http://localhost:3000/audit/checklist');
+    const res = await fetch('http://localhost:3001/audit/checklist');
     const data = await res.json();
     if (data.success) {
       categories.value = data.data;
@@ -24,7 +24,7 @@ const fetchChecklists = async () => {
 
 const saveChecklists = async () => {
   try {
-    const res = await fetch('http://localhost:3000/audit/checklist/sync', {
+    const res = await fetch('http://localhost:3001/audit/checklist/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ categories: categories.value })

@@ -13,7 +13,7 @@ const syncing = ref(false);
 const fetchOutlets = async () => {
   loading.value = true;
   try {
-    const res = await fetch('http://localhost:3000/audit/outlets');
+    const res = await fetch('http://localhost:3001/audit/outlets');
     if (res.ok) {
       outlets.value = await res.json();
     }
@@ -27,7 +27,7 @@ const fetchOutlets = async () => {
 const syncHRIS = async () => {
   syncing.value = true;
   try {
-    const res = await fetch('http://localhost:3000/audit/outlets/sync-hris', { method: 'POST' });
+    const res = await fetch('http://localhost:3001/audit/outlets/sync-hris', { method: 'POST' });
     const data = await res.json();
     if (res.ok && data.success) {
       alert(data.message);

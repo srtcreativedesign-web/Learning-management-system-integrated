@@ -19,7 +19,7 @@ const loading = ref(true);
 const fetchCourse = async () => {
   const id = route.params.id;
   try {
-    const res = await fetch(`http://localhost:3000/lms/courses/${id}`);
+    const res = await fetch(`http://localhost:3001/lms/courses/${id}`);
     if (res.ok) {
       course.value = await res.json();
     }
@@ -84,7 +84,7 @@ onMounted(() => {
                   <!-- PDF Embed -->
                   <iframe 
                     v-if="course.Materials[0].type.toUpperCase() === 'PDF'" 
-                    :src="'http://localhost:3000' + course.Materials[0].content_url" 
+                    :src="'http://localhost:3001' + course.Materials[0].content_url" 
                     class="w-full h-full border-none"
                     title="PDF Viewer"
                   ></iframe>
@@ -92,7 +92,7 @@ onMounted(() => {
                   <!-- Video Embed -->
                   <video 
                     v-else-if="course.Materials[0].type.toUpperCase() === 'VIDEO' || course.Materials[0].type.toUpperCase() === 'MP4'" 
-                    :src="'http://localhost:3000' + course.Materials[0].content_url" 
+                    :src="'http://localhost:3001' + course.Materials[0].content_url" 
                     controls 
                     class="w-full h-auto max-h-[800px] bg-slate-900"
                   ></video>
@@ -104,7 +104,7 @@ onMounted(() => {
                     </div>
                     <h3 class="text-2xl font-bold text-slate-700 mb-2">File Tersedia</h3>
                     <p class="text-slate-500 mb-8 max-w-md text-center">Format file ini tidak dapat dipratinjau langsung di browser. Silakan unduh untuk melihat isinya.</p>
-                    <a :href="'http://localhost:3000' + course.Materials[0].content_url" target="_blank" class="inline-block">
+                    <a :href="'http://localhost:3001' + course.Materials[0].content_url" target="_blank" class="inline-block">
                       <Button icon="pi pi-download" label="Unduh File Sekarang" severity="primary" class="shadow-md !rounded-xl !py-3 !px-8 !font-bold" />
                     </a>
                   </div>

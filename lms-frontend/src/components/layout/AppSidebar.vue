@@ -18,7 +18,7 @@ const menu = ref([
     items: [
       {
         label: 'Daftar Kursus',
-        path: '/courses'
+        path: '/library'
       }
     ]
   },
@@ -47,6 +47,15 @@ const menu = ref([
     expanded: true,
     items: [
       {
+        label: 'Gamifikasi & Kuis',
+        icon: 'pi pi-star',
+        expanded: true,
+        items: [
+          { label: 'Papan Peringkat (XP)', path: '/analytics/leaderboard' },
+          { label: 'Riwayat Kuis', path: '/analytics/quiz-history' }
+        ]
+      },
+      {
         label: 'Training & Development',
         icon: 'pi pi-chart-line',
         expanded: true,
@@ -60,6 +69,21 @@ const menu = ref([
         label: 'Audit & Assessment',
         icon: 'pi pi-chart-bar',
         path: '/analytics/audit'
+      }
+    ]
+  },
+  {
+    label: 'Standar Operasional (SOP)',
+    icon: 'pi pi-file',
+    expanded: false,
+    items: [
+      {
+        label: 'Pustaka SOP',
+        path: '/sop/viewer'
+      },
+      {
+        label: 'Unggah SOP (Admin)',
+        path: '/sop/management'
       }
     ]
   },
