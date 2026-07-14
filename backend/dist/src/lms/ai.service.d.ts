@@ -6,4 +6,10 @@ export declare class AiService {
         summary: string;
         questions: any[];
     }>;
+    extractSopPoints(text: string): Promise<{
+        points: {
+            title: string;
+            description: string;
+        }[];
+    }>;
 }

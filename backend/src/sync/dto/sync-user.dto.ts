@@ -9,4 +9,7 @@ export class SyncUserDto {
 
   @ApiProperty({ example: 'budi@sobathr.com' })
   email: string;
+
+  @ApiProperty({ example: '2025-01-01', required: false })
+  join_date?: string;
 }

@@ -80,16 +80,20 @@ Baca teks materi berikut secara menyeluruh dan lakukan dua hal:
 2. Buatlah 5 soal pilihan ganda (Multiple Choice) berbahasa Indonesia sesuai point point penting yang ada di dalam materi. hindari soal generik.
 
 Setiap soal harus memiliki 3-4 pilihan jawaban (options), dengan SATU jawaban yang benar.
-Output harus dalam format JSON object murni dengan key "summary" (tipe string) dan key "questions" (tipe array).
-Contoh struktur JSON:
+Output HARUS BERUPA FORMAT JSON MURNI tanpa markdown block (jangan gunakan \`\`\`json).
+Output JSON harus memiliki key "summary" (tipe string) dan key "questions" (tipe array).
+
+Contoh struktur JSON yang WAJIB DIIKUTI:
 {
+  "summary": "Ini adalah ringkasan dari materi...",
   "questions": [
     {
-      "question_text": "Apa tujuan dari sistem X?",
+      "question_text": "Apa ibu kota dari Indonesia?",
       "type": "MULTIPLE_CHOICE",
       "options": [
-        { "option_text": "Untuk efisiensi", "is_correct": true },
-        { "option_text": "Untuk membuang waktu", "is_correct": false }
+        { "option_text": "Jakarta", "is_correct": true },
+        { "option_text": "Bandung", "is_correct": false },
+        { "option_text": "Surabaya", "is_correct": false }
       ]
     }
   ]
@@ -105,7 +109,11 @@ ${text.substring(0, 50000)}
                 temperature: 0.3,
                 response_format: { type: 'json_object' }
             });
-            const responseContent = chatCompletion.choices[0]?.message?.content || '{}';
+            let responseContent = chatCompletion.choices[0]?.message?.content || '{}';
+            const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                responseContent = jsonMatch[0];
+            }
             const parsed = JSON.parse(responseContent);
             return {
                 summary: parsed.summary || 'Tidak ada ringkasan yang dihasilkan.',
@@ -115,6 +123,51 @@ ${text.substring(0, 50000)}
         catch (error) {
             console.error('AI Error:', error);
             return { summary: '', questions: [] };
+        }
+    }
+    async extractSopPoints(text) {
+        const prompt = `Anda adalah asisten AI yang ahli dalam mengekstrak Standar Operasional Prosedur (SOP).
+Baca teks dokumen SOP berikut ini secara menyeluruh dan ekstrak menjadi poin-poin langkah kerja.
+
+Setiap langkah kerja harus memiliki:
+1. "title": Judul singkat langkah kerja tersebut (maksimal 1 kalimat).
+2. "description": Penjelasan detail dari langkah tersebut. Jika ada poin-poin tambahan atau peringatan, masukkan ke dalam description ini secara deskriptif.
+
+Output HARUS BERUPA FORMAT JSON MURNI tanpa markdown block (jangan gunakan \`\`\`json).
+Output JSON harus memiliki key "points" (tipe array of objects).
+Contoh struktur JSON yang WAJIB DIIKUTI:
+{
+  "points": [
+    {
+      "title": "Tahap 1: Persiapan Area Kerja",
+      "description": "Pastikan area kerja bersih dari debu dan kotoran. Gunakan alat pelindung diri sebelum memulai."
+    }
+  ]
+}
+
+Teks Materi:
+${text.substring(0, 50000)}
+`;
+        try {
+            const chatCompletion = await this.groq.chat.completions.create({
+                messages: [{ role: 'user', content: prompt }],
+                model: 'llama-3.1-8b-instant',
+                temperature: 0.1,
+                response_format: { type: 'json_object' }
+            });
+            let responseContent = chatCompletion.choices[0]?.message?.content || '{}';
+            const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                responseContent = jsonMatch[0];
+            }
+            const parsed = JSON.parse(responseContent);
+            return {
+                points: parsed.points || []
+            };
+        }
+        catch (error) {
+            console.error('AI SOP Error:', error);
+            return { points: [] };
         }
     }
 };

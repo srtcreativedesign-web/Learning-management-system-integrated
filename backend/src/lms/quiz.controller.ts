@@ -19,6 +19,18 @@ export class QuizController {
     return this.quizService.createQuiz(payload);
   }
 
+  @Get('all')
+  @ApiOperation({ summary: 'Get all quizzes for admin panel' })
+  async getAllQuizzes() {
+    return this.quizService.getAllQuizzes();
+  }
+
+  @Get('attempts')
+  @ApiOperation({ summary: 'Get all quiz attempts history' })
+  async getAllAttempts() {
+    return this.quizService.getAllAttempts();
+  }
+
   @Get('material/:materialId')
   @ApiOperation({ summary: 'Get quiz by material ID' })
   async getQuizByMaterial(@Param('materialId') materialId: string) {

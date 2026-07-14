@@ -14,13 +14,19 @@ const quiz_controller_1 = require("./quiz.controller");
 const quiz_service_1 = require("./quiz.service");
 const certificate_template_controller_1 = require("./certificate-template.controller");
 const certificate_template_service_1 = require("./certificate-template.service");
+const knowledge_hub_controller_1 = require("./knowledge-hub.controller");
 const ai_service_1 = require("./ai.service");
 let LmsModule = class LmsModule {
 };
 exports.LmsModule = LmsModule;
 exports.LmsModule = LmsModule = __decorate([
     (0, common_1.Module)({
-        controllers: [course_controller_1.CourseController, quiz_controller_1.QuizController, certificate_template_controller_1.CertificateTemplateController],
+        controllers: [
+            course_controller_1.CourseController,
+            quiz_controller_1.QuizController,
+            certificate_template_controller_1.CertificateTemplateController,
+            knowledge_hub_controller_1.KnowledgeHubController
+        ],
         providers: [course_service_1.CourseService, quiz_service_1.QuizService, certificate_template_service_1.CertificateTemplateService, ai_service_1.AiService]
     })
 ], LmsModule);

@@ -7,13 +7,16 @@ export declare class SyncController {
     syncUser(dto: SyncUserDto): Promise<{
         id: string;
         hris_user_id: string;
-        email: string;
         full_name: string;
+        email: string;
+        join_date: Date | null;
+        total_xp: number;
+        current_rank: string;
     }>;
     syncDivision(dto: SyncDivisionDto): Promise<{
         id: string;
-        hris_division_id: string;
         name: string;
+        hris_division_id: string;
     }>;
     syncEmployeesFromHRIS(): Promise<{
         success: boolean;
@@ -22,7 +25,10 @@ export declare class SyncController {
     getEmployees(): Promise<{
         id: string;
         hris_user_id: string;
-        email: string;
         full_name: string;
+        email: string;
+        join_date: Date | null;
+        total_xp: number;
+        current_rank: string;
     }[]>;
 }

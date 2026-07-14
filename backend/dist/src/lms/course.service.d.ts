@@ -5,8 +5,8 @@ export declare class CourseService {
     constructor(prisma: PrismaClient);
     create(dto: CreateCourseDto): Promise<{
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;
@@ -23,8 +23,8 @@ export declare class CourseService {
                     }[];
                 } & {
                     id: string;
-                    type: string;
                     quiz_id: string;
+                    type: string;
                     question_text: string;
                 })[];
             } & {
@@ -42,8 +42,8 @@ export declare class CourseService {
         })[];
     } & {
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;
@@ -60,8 +60,8 @@ export declare class CourseService {
                     }[];
                 } & {
                     id: string;
-                    type: string;
                     quiz_id: string;
+                    type: string;
                     question_text: string;
                 })[];
             } & {
@@ -79,16 +79,16 @@ export declare class CourseService {
         })[];
     } & {
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;
     }) | null>;
     update(id: string, dto: any): Promise<{
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;

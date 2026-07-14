@@ -19,8 +19,12 @@ model UserShadow {
   hris_user_id   String                   @unique
   full_name      String
   email          String                   @unique
+  join_date      DateTime?
+  total_xp       Int                      @default(0)
+  current_rank   String                   @default("Pemula")
   CourseProgress EmployeeCourseProgress[]
   QuizAttempts   EmployeeQuizAttempt[]
+  XpAuditTrails  XpAuditTrail[]
 
   @@map("users_shadow")
 }
@@ -147,9 +151,12 @@ model EmployeeCourseProgress {
 model EmployeeQuizAttempt {
   id        String  @id @default(uuid())
   user_id   String
-  quiz_id   String
-  score     Float
-  is_passed Boolean
+  quiz_id    String
+  score      Float
+  is_passed  Boolean
+  xp_awarded Int     @default(0)
+  answers_detail Json?
+  created_at DateTime @default(now())
 
   User UserShadow @relation(fields: [user_id], references: [id], onDelete: Cascade)
   Quiz Quiz       @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
@@ -225,3 +232,45 @@ model AuditFinding {
 
   @@map("audit_findings")
 }
+
+// D. SOP Management
+
+model SopDocument {
+  id          String      @id @default(uuid())
+  title       String
+  category    String      // 'HEAD_OFFICE' | 'OPERASIONAL'
+  source_pdf  String?     // File PDF asli yang diunggah
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  
+  Points      SopPoint[]
+
+  @@map("sop_documents")
+}
+
+model SopPoint {
+  id          String      @id @default(uuid())
+  sop_id      String
+  order_num   Int
+  title       String      @db.Text
+  description String?     @db.Text
+  
+  Document    SopDocument @relation(fields: [sop_id], references: [id], onDelete: Cascade)
+
+  @@map("sop_points")
+}
+
+// E. Gamification Audit
+model XpAuditTrail {
+  id           String     @id @default(uuid())
+  user_id      String
+  old_xp       Int
+  new_xp       Int
+  reason       String?    @db.Text
+  created_at   DateTime   @default(now())
+
+  User         UserShadow @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("xp_audit_trails")
+}
+

@@ -67,8 +67,25 @@ export class QuizService {
   }
 
   // [Mobile/Web] Submit answers
-  async submitQuiz(quizId: string, payload: { user_id: string; answers: { question_id: string; selected_option_ids: string[] }[] }) {
-    const { user_id, answers } = payload;
+  async submitQuiz(quizId: string, payload: { hris_user_id?: string; user_id?: string; answers: { question_id: string; selected_option_ids: string[] }[] }) {
+    let { hris_user_id, answers } = payload;
+    let user_id = payload.user_id;
+    
+    // Auto-detect if HRIS mobile app mistakenly sends HRIS ID inside user_id
+    if (user_id && !user_id.includes('-')) {
+      hris_user_id = user_id;
+      user_id = undefined;
+    }
+    
+    // Find UserShadow by hris_user_id
+    if (hris_user_id && !user_id) {
+      const u = await this.prisma.userShadow.findUnique({ where: { hris_user_id } });
+      if (u) {
+        user_id = u.id;
+      }
+    }
+    
+    if (!user_id) throw new NotFoundException('User identity missing or not found in LMS');
 
     // Fetch the quiz with correct answers to validate
     const quiz = await this.prisma.quiz.findUnique({
@@ -77,6 +94,9 @@ export class QuizService {
         Questions: {
           include: { Options: true },
         },
+        Material: {
+          include: { Course: true }
+        }
       },
     });
 
@@ -84,6 +104,7 @@ export class QuizService {
 
     let correctCount = 0;
     const totalQuestions = quiz.Questions.length;
+    const answersDetail: any[] = [];
 
     // Calculate score
     for (const userAns of answers) {
@@ -100,11 +121,54 @@ export class QuizService {
       if (isExactlyCorrect) {
         correctCount++;
       }
+      
+      answersDetail.push({
+        question_id: question.id,
+        question_text: question.question_text,
+        user_selected_ids: userAns.selected_option_ids,
+        correct_option_ids: correctOptionIds,
+        is_correct: isExactlyCorrect,
+        options: question.Options.map(opt => ({
+          id: opt.id,
+          text: opt.option_text,
+          is_correct: opt.is_correct
+        }))
+      });
     }
 
     // Convert to percentage score
     const score = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
     const is_passed = score >= quiz.passing_score;
+
+    let xp_awarded = 0;
+    
+    // Add XP if passed
+    if (is_passed) {
+      xp_awarded = quiz.Material?.Course?.reward_points || 0;
+      
+      // Update UserShadow total_xp and current_rank
+      if (xp_awarded > 0) {
+        const user = await this.prisma.userShadow.findUnique({ where: { id: user_id } });
+        if (user) {
+          const newXp = user.total_xp + xp_awarded;
+          
+          // Determine new rank
+          let newRank = 'Pemula';
+          if (newXp > 1000) newRank = 'Pakar SobatHR';
+          else if (newXp > 600) newRank = 'Master Pengetahuan';
+          else if (newXp > 300) newRank = 'Karyawan Terampil';
+          else if (newXp > 100) newRank = 'Pembelajar Aktif';
+
+          await this.prisma.userShadow.update({
+            where: { id: user_id },
+            data: {
+              total_xp: newXp,
+              current_rank: newRank
+            }
+          });
+        }
+      }
+    }
 
     // Save attempt
     const attempt = await this.prisma.employeeQuizAttempt.create({
@@ -113,16 +177,67 @@ export class QuizService {
         quiz_id: quiz.id,
         score,
         is_passed,
+        xp_awarded,
+        answers_detail: answersDetail
       },
     });
 
-    // TODO: Trigger Webhook to Laravel HRIS for certificate generation if passed.
+    // Trigger Webhook to Laravel HRIS for certificate generation if passed.
+    if (is_passed) {
+      try {
+        const axios = require('axios');
+        await axios.post('http://localhost:8000/api/webhooks/lms/certificate-trigger', {
+          user_id,
+          quiz_id: quiz.id,
+          attempt_id: attempt.id,
+          score,
+          is_passed,
+        });
+      } catch (err: any) {
+        console.error('Failed to trigger webhook to HRIS:', err.message);
+      }
+    }
 
     return {
       attempt_id: attempt.id,
       score,
       is_passed,
       passing_score: quiz.passing_score,
+      xp_awarded,
     };
+  }
+
+  // [Admin] Get all quizzes
+  async getAllQuizzes() {
+    return this.prisma.quiz.findMany({
+      include: {
+        Material: {
+          include: { Course: true }
+        },
+        _count: {
+          select: { Questions: true, EmployeeQuizAttempts: true }
+        }
+      },
+      orderBy: { id: 'desc' }
+    });
+  }
+
+  // [Admin] Get all quiz attempts (history)
+  async getAllAttempts() {
+    return this.prisma.employeeQuizAttempt.findMany({
+      include: {
+        User: {
+          select: { full_name: true, hris_user_id: true, current_rank: true }
+        },
+        Quiz: {
+          include: {
+            Material: {
+              include: { Course: true }
+            }
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
   }
 }

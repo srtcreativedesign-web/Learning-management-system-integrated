@@ -31,6 +31,12 @@ let QuizController = class QuizController {
     async createQuizDraft(payload) {
         return this.quizService.createQuiz(payload);
     }
+    async getAllQuizzes() {
+        return this.quizService.getAllQuizzes();
+    }
+    async getAllAttempts() {
+        return this.quizService.getAllAttempts();
+    }
     async getQuizByMaterial(materialId) {
         return this.quizService.getQuizByMaterialId(materialId);
     }
@@ -78,6 +84,20 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], QuizController.prototype, "createQuizDraft", null);
+__decorate([
+    (0, common_1.Get)('all'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all quizzes for admin panel' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], QuizController.prototype, "getAllQuizzes", null);
+__decorate([
+    (0, common_1.Get)('attempts'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all quiz attempts history' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], QuizController.prototype, "getAllAttempts", null);
 __decorate([
     (0, common_1.Get)('material/:materialId'),
     (0, swagger_1.ApiOperation)({ summary: 'Get quiz by material ID' }),

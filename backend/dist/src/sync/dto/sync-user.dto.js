@@ -15,6 +15,7 @@ class SyncUserDto {
     hris_user_id;
     full_name;
     email;
+    join_date;
 }
 exports.SyncUserDto = SyncUserDto;
 __decorate([
@@ -29,4 +30,8 @@ __decorate([
     (0, swagger_1.ApiProperty)({ example: 'budi@sobathr.com' }),
     __metadata("design:type", String)
 ], SyncUserDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: '2025-01-01', required: false }),
+    __metadata("design:type", String)
+], SyncUserDto.prototype, "join_date", void 0);
 //# sourceMappingURL=sync-user.dto.js.map

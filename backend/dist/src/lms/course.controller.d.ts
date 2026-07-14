@@ -5,8 +5,8 @@ export declare class CourseController {
     constructor(courseService: CourseService);
     create(dto: CreateCourseDto): Promise<{
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;
@@ -23,8 +23,8 @@ export declare class CourseController {
                     }[];
                 } & {
                     id: string;
-                    type: string;
                     quiz_id: string;
+                    type: string;
                     question_text: string;
                 })[];
             } & {
@@ -42,8 +42,8 @@ export declare class CourseController {
         })[];
     } & {
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;
@@ -60,8 +60,8 @@ export declare class CourseController {
                     }[];
                 } & {
                     id: string;
-                    type: string;
                     quiz_id: string;
+                    type: string;
                     question_text: string;
                 })[];
             } & {
@@ -79,8 +79,8 @@ export declare class CourseController {
         })[];
     } & {
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;
@@ -93,8 +93,8 @@ export declare class CourseController {
     }>;
     update(id: string, dto: any): Promise<{
         id: string;
-        title: string;
         description: string | null;
+        title: string;
         thumbnail_url: string | null;
         reward_points: number;
         due_date: Date | null;

@@ -26,6 +26,7 @@ export class CourseController {
     return this.courseService.findAll();
   }
 
+
   @Get(':id')
   @ApiOperation({ summary: 'Get course by ID' })
   async getCourseById(@Param('id') id: string) {

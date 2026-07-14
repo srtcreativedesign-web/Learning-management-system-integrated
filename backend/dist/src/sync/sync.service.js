@@ -27,11 +27,13 @@ let SyncService = class SyncService {
             update: {
                 full_name: dto.full_name,
                 email: dto.email,
+                ...(dto.join_date && { join_date: new Date(dto.join_date) }),
             },
             create: {
                 hris_user_id: dto.hris_user_id,
                 full_name: dto.full_name,
                 email: dto.email,
+                join_date: dto.join_date ? new Date(dto.join_date) : null,
             },
         });
     }
@@ -62,11 +64,13 @@ let SyncService = class SyncService {
                     update: {
                         full_name: emp.name,
                         email: emp.email,
+                        ...(emp.join_date && { join_date: new Date(emp.join_date) }),
                     },
                     create: {
                         hris_user_id: String(emp.id),
                         full_name: emp.name,
                         email: emp.email,
+                        join_date: emp.join_date ? new Date(emp.join_date) : null,
                     },
                 });
                 syncedCount++;

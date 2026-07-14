@@ -67,19 +67,36 @@ let QuizService = class QuizService {
         return quiz;
     }
     async submitQuiz(quizId, payload) {
-        const { user_id, answers } = payload;
+        let { hris_user_id, answers } = payload;
+        let user_id = payload.user_id;
+        if (user_id && !user_id.includes('-')) {
+            hris_user_id = user_id;
+            user_id = undefined;
+        }
+        if (hris_user_id && !user_id) {
+            const u = await this.prisma.userShadow.findUnique({ where: { hris_user_id } });
+            if (u) {
+                user_id = u.id;
+            }
+        }
+        if (!user_id)
+            throw new common_1.NotFoundException('User identity missing or not found in LMS');
         const quiz = await this.prisma.quiz.findUnique({
             where: { id: quizId },
             include: {
                 Questions: {
                     include: { Options: true },
                 },
+                Material: {
+                    include: { Course: true }
+                }
             },
         });
         if (!quiz)
             throw new common_1.NotFoundException('Quiz not found');
         let correctCount = 0;
         const totalQuestions = quiz.Questions.length;
+        const answersDetail = [];
         for (const userAns of answers) {
             const question = quiz.Questions.find((q) => q.id === userAns.question_id);
             if (!question)
@@ -90,23 +107,109 @@ let QuizService = class QuizService {
             if (isExactlyCorrect) {
                 correctCount++;
             }
+            answersDetail.push({
+                question_id: question.id,
+                question_text: question.question_text,
+                user_selected_ids: userAns.selected_option_ids,
+                correct_option_ids: correctOptionIds,
+                is_correct: isExactlyCorrect,
+                options: question.Options.map(opt => ({
+                    id: opt.id,
+                    text: opt.option_text,
+                    is_correct: opt.is_correct
+                }))
+            });
         }
         const score = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
         const is_passed = score >= quiz.passing_score;
+        let xp_awarded = 0;
+        if (is_passed) {
+            xp_awarded = quiz.Material?.Course?.reward_points || 0;
+            if (xp_awarded > 0) {
+                const user = await this.prisma.userShadow.findUnique({ where: { id: user_id } });
+                if (user) {
+                    const newXp = user.total_xp + xp_awarded;
+                    let newRank = 'Pemula';
+                    if (newXp > 1000)
+                        newRank = 'Pakar SobatHR';
+                    else if (newXp > 600)
+                        newRank = 'Master Pengetahuan';
+                    else if (newXp > 300)
+                        newRank = 'Karyawan Terampil';
+                    else if (newXp > 100)
+                        newRank = 'Pembelajar Aktif';
+                    await this.prisma.userShadow.update({
+                        where: { id: user_id },
+                        data: {
+                            total_xp: newXp,
+                            current_rank: newRank
+                        }
+                    });
+                }
+            }
+        }
         const attempt = await this.prisma.employeeQuizAttempt.create({
             data: {
                 user_id,
                 quiz_id: quiz.id,
                 score,
                 is_passed,
+                xp_awarded,
+                answers_detail: answersDetail
             },
         });
+        if (is_passed) {
+            try {
+                const axios = require('axios');
+                await axios.post('http://localhost:8000/api/webhooks/lms/certificate-trigger', {
+                    user_id,
+                    quiz_id: quiz.id,
+                    attempt_id: attempt.id,
+                    score,
+                    is_passed,
+                });
+            }
+            catch (err) {
+                console.error('Failed to trigger webhook to HRIS:', err.message);
+            }
+        }
         return {
             attempt_id: attempt.id,
             score,
             is_passed,
             passing_score: quiz.passing_score,
+            xp_awarded,
         };
+    }
+    async getAllQuizzes() {
+        return this.prisma.quiz.findMany({
+            include: {
+                Material: {
+                    include: { Course: true }
+                },
+                _count: {
+                    select: { Questions: true, EmployeeQuizAttempts: true }
+                }
+            },
+            orderBy: { id: 'desc' }
+        });
+    }
+    async getAllAttempts() {
+        return this.prisma.employeeQuizAttempt.findMany({
+            include: {
+                User: {
+                    select: { full_name: true, hris_user_id: true, current_rank: true }
+                },
+                Quiz: {
+                    include: {
+                        Material: {
+                            include: { Course: true }
+                        }
+                    }
+                }
+            },
+            orderBy: { created_at: 'desc' }
+        });
     }
 };
 exports.QuizService = QuizService;

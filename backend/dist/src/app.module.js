@@ -15,12 +15,14 @@ const lms_module_1 = require("./lms/lms.module");
 const audit_module_1 = require("./audit/audit.module");
 const auth_module_1 = require("./auth/auth.module");
 const sync_module_1 = require("./sync/sync.module");
+const sop_module_1 = require("./sop/sop.module");
+const gamification_module_1 = require("./gamification/gamification.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, lms_module_1.LmsModule, audit_module_1.AuditModule, auth_module_1.AuthModule, sync_module_1.SyncModule],
+        imports: [prisma_module_1.PrismaModule, lms_module_1.LmsModule, audit_module_1.AuditModule, auth_module_1.AuthModule, sync_module_1.SyncModule, sop_module_1.SopModule, gamification_module_1.GamificationModule],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })
