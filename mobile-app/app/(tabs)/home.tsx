@@ -21,7 +21,7 @@ export default function HomeScreen() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 20, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
         <View>
           <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.primary }}>TND SYSTEM</Text>
-          <Text style={{ color: COLORS.textLight, marginTop: 4 }}>Selamat datang kembali, Budi!</Text>
+          <Text style={{ color: COLORS.textSecondary, marginTop: 4 }}>Selamat datang kembali, Budi!</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity style={{ marginRight: 16 }}>
