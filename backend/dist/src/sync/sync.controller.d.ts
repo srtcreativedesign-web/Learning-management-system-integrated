@@ -9,6 +9,7 @@ export declare class SyncController {
         hris_user_id: string;
         full_name: string;
         email: string;
+        role: string;
         join_date: Date | null;
         total_xp: number;
         current_rank: string;
@@ -27,6 +28,7 @@ export declare class SyncController {
         hris_user_id: string;
         full_name: string;
         email: string;
+        role: string;
         join_date: Date | null;
         total_xp: number;
         current_rank: string;

@@ -46,7 +46,11 @@ export class SyncService {
     const hrisUrl = (process.env.HRIS_BASE_URL || 'http://localhost:8000') + '/api/v1/lms/employees';
     
     try {
-      const response = await firstValueFrom(this.httpService.get(hrisUrl));
+      const response = await firstValueFrom(
+        this.httpService.get(hrisUrl, {
+          timeout: 10000,
+        })
+      );
       
       if (!response.data || !response.data.success || !response.data.data) {
         throw new Error('Invalid response format from HRIS');

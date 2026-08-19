@@ -64,32 +64,40 @@ Teks Materi:
 ${text.substring(0, 50000)}
 `;
 
-    try {
-      const chatCompletion = await this.groq.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        model: 'llama-3.1-8b-instant',
-        temperature: 0.3,
-        response_format: { type: 'json_object' }
-      });
+    const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
 
-      let responseContent = chatCompletion.choices[0]?.message?.content || '{}';
-      
-      // Ekstrak hanya blok JSON jika model menambahkan teks pengantar
-      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        responseContent = jsonMatch[0];
+    for (const model of models) {
+      try {
+        const chatCompletion = await this.groq.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model,
+          temperature: 0.3,
+          response_format: { type: 'json_object' }
+        });
+
+        let responseContent = chatCompletion.choices[0]?.message?.content || '{}';
+        
+        // Ekstrak hanya blok JSON jika model menambahkan teks pengantar
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          responseContent = jsonMatch[0];
+        }
+
+        const parsed = JSON.parse(responseContent);
+        if (parsed.questions && parsed.questions.length > 0) {
+          return {
+            summary: parsed.summary || 'Tidak ada ringkasan yang dihasilkan.',
+            questions: parsed.questions
+          };
+        }
+      } catch (error) {
+        console.error(`AI Error with model ${model}:`, error);
       }
-
-      const parsed = JSON.parse(responseContent);
-      return {
-        summary: parsed.summary || 'Tidak ada ringkasan yang dihasilkan.',
-        questions: parsed.questions || []
-      };
-    } catch (error) {
-      console.error('AI Error:', error);
-      return { summary: '', questions: [] };
     }
+
+    return { summary: '', questions: [] };
   }
+
   async extractSopPoints(text: string): Promise<{ points: { title: string, description: string }[] }> {
     const prompt = `Anda adalah asisten AI yang ahli dalam mengekstrak Standar Operasional Prosedur (SOP).
 Baca teks dokumen SOP berikut ini secara menyeluruh dan ekstrak menjadi poin-poin langkah kerja.
@@ -114,28 +122,35 @@ Teks Materi:
 ${text.substring(0, 50000)}
 `;
 
-    try {
-      const chatCompletion = await this.groq.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        model: 'llama-3.1-8b-instant',
-        temperature: 0.1, // Rendah agar lebih faktual
-        response_format: { type: 'json_object' }
-      });
+    const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
 
-      let responseContent = chatCompletion.choices[0]?.message?.content || '{}';
-      
-      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        responseContent = jsonMatch[0];
+    for (const model of models) {
+      try {
+        const chatCompletion = await this.groq.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model,
+          temperature: 0.1, // Rendah agar lebih faktual
+          response_format: { type: 'json_object' }
+        });
+
+        let responseContent = chatCompletion.choices[0]?.message?.content || '{}';
+        
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          responseContent = jsonMatch[0];
+        }
+
+        const parsed = JSON.parse(responseContent);
+        if (parsed.points && parsed.points.length > 0) {
+          return {
+            points: parsed.points
+          };
+        }
+      } catch (error) {
+        console.error(`AI SOP Error with model ${model}:`, error);
       }
-
-      const parsed = JSON.parse(responseContent);
-      return {
-        points: parsed.points || []
-      };
-    } catch (error) {
-      console.error('AI SOP Error:', error);
-      return { points: [] };
     }
+
+    return { points: [] };
   }
 }

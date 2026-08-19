@@ -27,4 +27,39 @@ export declare class GamificationService {
         new_xp: number;
         new_rank: string;
     }>;
+    getRankRewards(): Promise<{
+        id: string;
+        created_at: Date;
+        updated_at: Date;
+        rank_name: string;
+        min_xp: number;
+        reward_title: string;
+        reward_description: string | null;
+        is_active: boolean;
+    }[]>;
+    getAllRankRewardsAdmin(): Promise<{
+        id: string;
+        created_at: Date;
+        updated_at: Date;
+        rank_name: string;
+        min_xp: number;
+        reward_title: string;
+        reward_description: string | null;
+        is_active: boolean;
+    }[]>;
+    updateRankReward(id: string, payload: {
+        reward_title?: string;
+        reward_description?: string;
+        min_xp?: number;
+        is_active?: boolean;
+    }): Promise<{
+        id: string;
+        created_at: Date;
+        updated_at: Date;
+        rank_name: string;
+        min_xp: number;
+        reward_title: string;
+        reward_description: string | null;
+        is_active: boolean;
+    }>;
 }

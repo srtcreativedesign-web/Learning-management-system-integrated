@@ -9,8 +9,14 @@ import {
   Check,
   X,
   Circle,
+  User,
+  BookOpen,
+  Award,
+  Calendar,
+  X as CloseIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTable, ColumnDef } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -33,6 +39,7 @@ interface Attempt {
     hris_user_id: string;
   };
   Quiz?: {
+    passing_score?: number;
     Material?: {
       Course?: {
         title: string;
@@ -89,7 +96,7 @@ export const QuizHistoryView: React.FC = () => {
       render: (row) => (
         <div className="flex flex-col">
           <span className="font-bold text-slate-800">{row.User?.full_name || 'Unknown'}</span>
-          <span className="text-xs text-slate-400 font-mono">{row.User?.hris_user_id}</span>
+          <span className="text-xs text-slate-400 font-mono">ID: {row.User?.hris_user_id}</span>
         </div>
       ),
     },
@@ -159,7 +166,7 @@ export const QuizHistoryView: React.FC = () => {
       {/* Reusable Page Header */}
       <PageHeader
         title="Riwayat Pengerjaan Kuis"
-        subtitle="Lacak performa belajar, skor, dan evaluasi jawaban tiap karyawan."
+        subtitle="Lacak performa belajar, skor kelulusan, dan evaluasi jawaban tiap karyawan."
         icon={<History className="w-7 h-7 text-[#419CC3]" />}
         actions={
           <Button
@@ -183,115 +190,232 @@ export const QuizHistoryView: React.FC = () => {
         emptyMessage="Belum ada riwayat pengerjaan kuis."
       />
 
-      {/* Evaluation Detail Modal */}
+      {/* Spacious & Proportional Evaluation Detail Modal */}
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-800">
-              Evaluasi Jawaban Kuis
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 rounded-2xl bg-white border border-slate-200 shadow-2xl">
+          {/* Modal Header */}
+          <div className="p-6 border-b border-slate-100 bg-slate-50/70 flex items-start justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <DialogTitle className="text-xl font-bold text-slate-800">
+                  Evaluasi Jawaban Kuis
+                </DialogTitle>
+                {selectedAttempt && (
+                  <StatusBadge status={selectedAttempt.is_passed ? 'passed' : 'failed'} />
+                )}
+              </div>
+              <p className="text-xs text-slate-500 flex items-center gap-2">
+                <span>{selectedAttempt?.Quiz?.Material?.Course?.title || 'Materi Kuis'}</span>
+                <span>•</span>
+                <span>{formatDate(selectedAttempt?.created_at)}</span>
+              </p>
+            </div>
+          </div>
 
           {selectedAttempt && (
-            <div className="space-y-5 pt-2">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-500">Karyawan</p>
-                  <p className="font-bold text-slate-800 text-sm">
-                    {selectedAttempt.User?.full_name}
-                  </p>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              {/* Summary Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* 1. Karyawan */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#419CC3]/10 text-[#419CC3] flex items-center justify-center font-bold text-sm shrink-0">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Karyawan
+                    </p>
+                    <p className="font-bold text-slate-800 text-xs truncate">
+                      {selectedAttempt.User?.full_name || 'Karyawan'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      ID: {selectedAttempt.User?.hris_user_id || '-'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-500">Skor Akhir</p>
-                  <p
-                    className={`font-extrabold text-2xl ${
-                      selectedAttempt.is_passed ? 'text-emerald-600' : 'text-rose-500'
+
+                {/* 2. Modul */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Materi Kursus
+                    </p>
+                    <p className="font-bold text-slate-800 text-xs truncate">
+                      {selectedAttempt.Quiz?.Material?.Course?.title || 'Umum'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Skor Akhir */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0 ${
+                      selectedAttempt.is_passed
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-rose-100 text-rose-700'
                     }`}
                   >
                     {Number(selectedAttempt.score).toFixed(0)}
-                  </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Skor Akhir
+                    </p>
+                    <p
+                      className={`font-extrabold text-xs ${
+                        selectedAttempt.is_passed ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
+                    >
+                      {selectedAttempt.is_passed ? 'Lulus Passing Grade' : 'Di Bawah Standar'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4. XP Awarded */}
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm shrink-0">
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      XP Diperoleh
+                    </p>
+                    <p className="font-extrabold text-amber-600 text-xs">
+                      +{selectedAttempt.xp_awarded} XP
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {selectedAttempt.answers_detail && selectedAttempt.answers_detail.length > 0 ? (
-                <div className="space-y-4">
+              {/* Questions & Detailed Answers Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                   <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
-                    Detail Soal & Jawaban
+                    Detail Evaluasi Soal ({selectedAttempt.answers_detail?.length || 0} Butir Soal)
                   </h3>
+                  <span className="text-xs text-slate-400">
+                    Kunci jawaban & opsi yang dipilih karyawan
+                  </span>
+                </div>
 
-                  {selectedAttempt.answers_detail.map((ans, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-4 rounded-xl border border-l-4 ${
-                        ans.is_correct
-                          ? 'border-l-emerald-500 bg-emerald-50/20 border-slate-200'
-                          : 'border-l-rose-500 bg-rose-50/20 border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 shrink-0">
-                          {ans.is_correct ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                          ) : (
-                            <XCircle className="w-5 h-5 text-rose-500" />
-                          )}
+                {selectedAttempt.answers_detail && selectedAttempt.answers_detail.length > 0 ? (
+                  <div className="space-y-4">
+                    {selectedAttempt.answers_detail.map((ans, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-5 rounded-2xl border transition-all ${
+                          ans.is_correct
+                            ? 'bg-emerald-50/30 border-emerald-200'
+                            : 'bg-rose-50/30 border-rose-200'
+                        }`}
+                      >
+                        {/* Question Header */}
+                        <div className="flex items-start justify-between gap-3 mb-3.5">
+                          <div className="flex items-start gap-2.5">
+                            <span className="w-6 h-6 rounded-full bg-slate-800 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {idx + 1}
+                            </span>
+                            <h4 className="font-bold text-sm text-slate-800 leading-snug">
+                              {ans.question_text}
+                            </h4>
+                          </div>
+
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs font-bold shrink-0 flex items-center gap-1.5 ${
+                              ans.is_correct
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}
+                          >
+                            {ans.is_correct ? (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Benar
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3.5 h-3.5 text-rose-600" /> Salah
+                              </>
+                            )}
+                          </Badge>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-800 text-sm mb-3">
-                            {idx + 1}. {ans.question_text}
-                          </p>
 
-                          <div className="space-y-1.5">
-                            {ans.options?.map((opt) => {
-                              const isSelectedByUser = ans.user_selected_ids?.includes(opt.id);
+                        {/* Options List */}
+                        <div className="space-y-2 pl-8.5">
+                          {ans.options?.map((opt) => {
+                            const isSelectedByUser = ans.user_selected_ids?.includes(opt.id);
 
-                              return (
-                                <div
-                                  key={opt.id}
-                                  className={`text-xs flex items-center gap-2 p-2.5 rounded-lg border transition-all ${
-                                    opt.is_correct
-                                      ? 'bg-emerald-100/60 text-emerald-900 border-emerald-200 font-semibold'
-                                      : isSelectedByUser
-                                      ? 'bg-rose-100/60 text-rose-900 border-rose-200 font-semibold'
-                                      : 'bg-white border-slate-100 text-slate-600'
-                                  }`}
-                                >
+                            return (
+                              <div
+                                key={opt.id}
+                                className={`text-xs flex items-center justify-between p-3 rounded-xl border transition-all ${
+                                  opt.is_correct
+                                    ? 'bg-emerald-100/70 text-emerald-900 border-emerald-300 font-semibold shadow-xs'
+                                    : isSelectedByUser
+                                    ? 'bg-rose-100/70 text-rose-900 border-rose-300 font-semibold shadow-xs'
+                                    : 'bg-white/80 border-slate-200 text-slate-600'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
                                   {opt.is_correct ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <Check className="w-4 h-4 text-emerald-700 shrink-0" />
                                   ) : isSelectedByUser ? (
-                                    <X className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                    <X className="w-4 h-4 text-rose-700 shrink-0" />
                                   ) : (
-                                    <Circle className="w-2.5 h-2.5 text-slate-300 shrink-0" />
+                                    <Circle className="w-3 h-3 text-slate-300 shrink-0" />
                                   )}
+                                  <span className="leading-relaxed">{opt.text}</span>
+                                </div>
 
-                                  <span className="flex-1">{opt.text}</span>
-
+                                <div className="flex items-center gap-2 shrink-0 ml-3">
                                   {isSelectedByUser && (
-                                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
+                                    <span
+                                      className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md ${
+                                        ans.is_correct
+                                          ? 'bg-emerald-200 text-emerald-900'
+                                          : 'bg-rose-200 text-rose-900'
+                                      }`}
+                                    >
                                       Jawaban Karyawan
                                     </span>
                                   )}
                                   {opt.is_correct && !isSelectedByUser && (
-                                    <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
+                                    <span className="text-[10px] uppercase font-bold tracking-wider bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md">
                                       Kunci Jawaban
                                     </span>
                                   )}
                                 </div>
-                              );
-                            })}
-                          </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-xs text-slate-400 py-8">
-                  Detail jawaban tidak direkam untuk kuis ini.
-                </p>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-xs text-slate-400">
+                      Detail butir jawaban tidak direkam untuk percobaan kuis ini.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
+
+          {/* Modal Footer */}
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowDetail(false)}
+              className="font-bold text-xs px-5 border-slate-200"
+            >
+              Tutup
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

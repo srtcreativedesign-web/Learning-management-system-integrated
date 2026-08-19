@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Award, Pencil, AlertCircle, Loader2 } from 'lucide-react';
+import { Award, Pencil, AlertCircle, Loader2, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +26,7 @@ interface LeaderboardUser {
 }
 
 export const LeaderboardView: React.FC = () => {
+  const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
   const [editData, setEditData] = useState({
     hris_user_id: '',
@@ -155,6 +157,14 @@ export const LeaderboardView: React.FC = () => {
         title="Papan Peringkat (Leaderboard)"
         subtitle="Pantau total XP dan Rank Gamifikasi seluruh karyawan."
         icon={<Award className="w-7 h-7 text-amber-500" />}
+        actions={
+          <Button
+            onClick={() => navigate('/analytics/rank-rewards')}
+            className="bg-[#419CC3] hover:bg-[#3484a6] text-white font-bold text-xs flex items-center gap-2 shadow-sm"
+          >
+            <Gift className="w-4 h-4" /> Kelola Hadiah Level
+          </Button>
+        }
       />
 
       {/* Reusable Data Table */}

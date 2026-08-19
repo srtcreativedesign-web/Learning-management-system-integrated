@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useAuth } from '../../context/AuthContext';
 
 const COLORS = {
   primary: '#419CC3',
@@ -10,24 +11,60 @@ const COLORS = {
   shadow: 'rgba(0, 0, 0, 0.1)',
 };
 
-// Map route names to Material Icons
-const getIconName = (routeName: string) => {
-  switch (routeName) {
-    case 'home': return 'home';
-    case 'outlets': return 'storefront';
-    case 'findings': return 'assignment-late';
-    case 'profile': return 'person';
-    default: return 'circle';
-  }
-};
-
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  // Option 1: Floating Center
-  // We insert the floating button in the middle of our 4 tabs
+  const { user } = useAuth();
+  const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');
+
+  // Dynamic tab labels & icons based on role
+  const getTabMeta = (routeName: string) => {
+    if (isTrainer) {
+      switch (routeName) {
+        case 'home':
+          return { label: 'Training', icon: 'school' as const };
+        case 'outlets':
+          return { label: 'In-House', icon: 'fact-check' as const };
+        case 'findings':
+          return { label: 'Modul SOP', icon: 'menu-book' as const };
+        case 'profile':
+          return { label: 'Profil', icon: 'person' as const };
+        default:
+          return { label: routeName, icon: 'circle' as const };
+      }
+    }
+
+    // Default Auditor
+    switch (routeName) {
+      case 'home':
+        return { label: 'Beranda', icon: 'home' as const };
+      case 'outlets':
+        return { label: 'Outlet', icon: 'storefront' as const };
+      case 'findings':
+        return { label: 'Temuan', icon: 'assignment-late' as const };
+      case 'profile':
+        return { label: 'Profil', icon: 'person' as const };
+      default:
+        return { label: routeName, icon: 'circle' as const };
+    }
+  };
+
+  const handleCenterFabPress = () => {
+    if (isTrainer) {
+      Alert.alert(
+        'Aksi Cepat Trainer',
+        'Pilih aktivitas in-house training:\n\n1. Mulai Penilaian Outlet (SB/B/C/K)\n2. Evaluasi Kompetensi Staf Baru\n3. Buka Panduan SOP Modul',
+        [{ text: 'Tutup', style: 'cancel' }]
+      );
+    } else {
+      Alert.alert(
+        'Aksi Cepat Auditor',
+        'Pilih aktivitas audit lapangan:\n\n1. Mulai Inspeksi Outlet\n2. Catat Temuan Baru\n3. Verifikasi Tindakan Perbaikan',
+        [{ text: 'Tutup', style: 'cancel' }]
+      );
+    }
+  };
 
   const renderTabItem = (route: any, index: number) => {
-    const { options } = descriptors[route.key];
-    const label = options.title !== undefined ? options.title : route.name;
+    const meta = getTabMeta(route.name);
     const isFocused = state.index === index;
     const color = isFocused ? COLORS.primary : COLORS.inactive;
 
@@ -48,15 +85,13 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         key={route.key}
         accessibilityRole="button"
         accessibilityState={isFocused ? { selected: true } : {}}
-        accessibilityLabel={options.tabBarAccessibilityLabel}
-        testID={options.tabBarTestID}
         onPress={onPress}
         style={styles.tabItem}
         activeOpacity={0.7}
       >
-        <MaterialIcons name={getIconName(route.name)} size={24} color={color} />
+        <MaterialIcons name={meta.icon} size={24} color={color} />
         <Text style={[styles.tabLabel, { color }]}>
-          {label}
+          {meta.label}
         </Text>
       </TouchableOpacity>
     );
@@ -75,9 +110,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           <TouchableOpacity 
             style={styles.floatingButton}
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Aksi Cepat', 'Pilih tindakan: \n1. Mulai Audit\n2. Catat Temuan Baru')}
+            onPress={handleCenterFabPress}
           >
-            <MaterialIcons name="add" size={32} color="#FFFFFF" />
+            <MaterialIcons name="add" size={30} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
@@ -89,6 +124,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

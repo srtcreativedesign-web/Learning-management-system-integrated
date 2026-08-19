@@ -21,7 +21,14 @@ let AuthController = class AuthController {
         this.authService = authService;
     }
     login(loginDto) {
-        return this.authService.mockSsoLogin(loginDto.email);
+        return this.authService.login(loginDto.email, loginDto.password);
+    }
+    getProfile(authHeader) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new common_1.UnauthorizedException('Token otentikasi tidak ditemukan');
+        }
+        const token = authHeader.replace('Bearer ', '');
+        return this.authService.getProfile(token);
     }
 };
 exports.AuthController = AuthController;
@@ -33,6 +40,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Get)('me'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "getProfile", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

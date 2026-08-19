@@ -17,6 +17,7 @@ import {
   Check,
   X,
   Upload,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -248,12 +249,21 @@ export const LibraryView: React.FC = () => {
               )}
               Sync HRIS
             </Button>
-            <Button
-              onClick={openCreateModal}
-              className="bg-[#419CC3] hover:bg-[#3484a6] text-white font-bold flex items-center gap-2 shadow-sm"
-            >
-              <Plus className="w-4 h-4" /> Buat Baru
-            </Button>
+            {activeTab === 'materi' ? (
+              <Button
+                onClick={openCreateModal}
+                className="bg-[#419CC3] hover:bg-[#3484a6] text-white font-bold flex items-center gap-2 shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> Buat Materi Baru
+              </Button>
+            ) : (
+              <Button
+                onClick={() => navigate('/library/generate-quiz')}
+                className="bg-[#419CC3] hover:bg-[#3484a6] text-white font-bold flex items-center gap-2 shadow-sm"
+              >
+                <Sparkles className="w-4 h-4" /> Buat Kuis Baru (AI)
+              </Button>
+            )}
           </>
         }
       />
@@ -396,7 +406,10 @@ export const LibraryView: React.FC = () => {
             <EmptyState
               icon={<HelpCircle className="w-8 h-8" />}
               title="Belum ada Kuis"
-              description="Belum ada modul kuis evaluasi yang dibuat."
+              description="Belum ada modul kuis evaluasi yang dibuat. Anda dapat membuat kuis otomatis dengan bantuan AI dari materi yang sudah diunggah."
+              actionLabel="Buat Kuis Baru dengan AI"
+              onAction={() => navigate('/library/generate-quiz')}
+              actionIcon={<Sparkles className="w-4 h-4" />}
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

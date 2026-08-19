@@ -1,202 +1,314 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Platform, StatusBar, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../../src/context/AuthContext';
 
-// Theme constants based on the provided HTML
-const COLORS = {
-  background: '#F8F9FF',
+const PALETTE = {
+  background: '#F8FAFC',
   surface: '#FFFFFF',
   primary: '#419CC3',
-  secondary: '#89B4E1',
+  primaryDark: '#2C7B9E',
+  primaryLight: '#EFF8FC',
+  primaryBorder: '#BEE3F2',
   textMain: '#0B1C30',
-  textSecondary: '#3F484E',
-  border: '#BEC8CE',
-  success: '#10B981',
+  textSecondary: '#64748B',
+  border: '#E2E8F0',
+  cardBg: '#FFFFFF',
 };
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');
+  const firstName = user?.name ? user.name.split(' ')[0] : (isTrainer ? 'Budi' : 'Dian');
+  const displayRole = isTrainer ? 'Trainer & Asesor TnD' : 'Auditor Lapangan';
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.surface, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
-      {/* Top NavBar */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 20, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: PALETTE.background, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
+      <StatusBar barStyle="dark-content" backgroundColor={PALETTE.background} />
+
+      {/* ================= HEADER ================= */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }}>
         <View>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: COLORS.primary }}>TND SYSTEM</Text>
-          <Text style={{ color: COLORS.textSecondary, marginTop: 4 }}>Selamat datang kembali, Budi!</Text>
+          <Text style={{ fontSize: 13, color: PALETTE.textSecondary, fontWeight: '500' }}>
+            Selamat bertugas,
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+            <Text style={{ fontSize: 22, fontWeight: '700', color: PALETTE.textMain, letterSpacing: -0.5 }}>
+              {firstName}
+            </Text>
+            <View style={{ backgroundColor: PALETTE.primaryLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: PALETTE.primaryBorder }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: PALETTE.primaryDark }}>
+                {isTrainer ? 'TRAINER' : 'AUDITOR'}
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity style={{ marginRight: 16 }}>
-            <MaterialIcons name="notifications" size={24} color={COLORS.textSecondary} />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity 
+            onPress={() => Alert.alert('Notifikasi', 'Tidak ada notifikasi mendesak.')}
+            style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: PALETTE.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: PALETTE.border }}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="notifications-none" size={20} color={PALETTE.textSecondary} />
           </TouchableOpacity>
-          <View style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#C0E8FF', overflow: 'hidden' }}>
+
+          <TouchableOpacity 
+            onPress={() => router.push('/(tabs)/profile')}
+            style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: PALETTE.primaryBorder, overflow: 'hidden' }}
+            activeOpacity={0.7}
+          >
             <Image 
-              source={{ uri: 'https://i.pravatar.cc/150?img=11' }} 
+              source={{ uri: isTrainer ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' }} 
               style={{ width: '100%', height: '100%' }} 
             />
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView 
-        style={{ flex: 1, backgroundColor: COLORS.background }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 110 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section: Audit Schedule */}
-        <View style={{ backgroundColor: COLORS.primary, borderRadius: 16, padding: 24, marginBottom: 24, overflow: 'hidden' }}>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 1, opacity: 0.9, marginBottom: 4 }}>Mendatang</Text>
-          <Text style={{ fontSize: 20, fontWeight: '600', color: '#FFFFFF', marginBottom: 16 }}>Jadwal Audit Terdekat</Text>
-          
-          <View style={{ marginBottom: 24 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
-              <Text style={{ fontSize: 14, color: '#FFFFFF' }}>Persiapan Audit</Text>
-              <Text style={{ fontSize: 20, fontWeight: '600', color: '#FFFFFF' }}>60%</Text>
+        {/* ================= HERO CARD (Active Agenda) ================= */}
+        <View 
+          style={{ 
+            backgroundColor: PALETTE.surface, 
+            borderRadius: 20, 
+            padding: 18, 
+            marginTop: 8,
+            marginBottom: 20,
+            borderWidth: 1, 
+            borderColor: PALETTE.border,
+            shadowColor: '#0F172A',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.04,
+            shadowRadius: 10,
+            elevation: 2,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>
+                Agenda Kunjungan Hari Ini
+              </Text>
             </View>
-            <View style={{ width: '100%', height: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, overflow: 'hidden' }}>
-              <View style={{ width: '60%', height: '100%', backgroundColor: '#FFFFFF', borderRadius: 4 }} />
-            </View>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: PALETTE.textSecondary }}>
+              10:00 WIB
+            </Text>
           </View>
+
+          <Text style={{ fontSize: 17, fontWeight: '700', color: PALETTE.textMain, letterSpacing: -0.3, marginBottom: 6 }}>
+            {isTrainer ? 'Outlet Grand Indonesia' : 'Outlet Senayan City'}
+          </Text>
           
-          <TouchableOpacity style={{ width: '100%', paddingVertical: 12, backgroundColor: '#FFFFFF', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 14, marginRight: 8 }}>Lihat Detail Kunjungan</Text>
-            <MaterialIcons name="visibility" size={18} color={COLORS.primary} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 14 }}>
+            <MaterialIcons name="location-on" size={14} color={PALETTE.primary} />
+            <Text style={{ fontSize: 12, color: PALETTE.textSecondary, fontWeight: '500' }}>
+              {isTrainer ? 'West Mall Lt. 3 • Barista & Front Service' : 'Lt. LG • Kepatuhan Standar K3 & 5S'}
+            </Text>
+          </View>
+
+          <TouchableOpacity 
+            onPress={() => router.push('/(tabs)/outlets')}
+            style={{ 
+              backgroundColor: PALETTE.primary, 
+              paddingVertical: 12, 
+              borderRadius: 12, 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: 6 
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13 }}>
+              {isTrainer ? 'Mulai Penilaian On-Site (SB/B/C/K)' : 'Mulai Inspeksi Kepatuhan'}
+            </Text>
+            <MaterialIcons name="arrow-forward" size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        {/* Stat Cards */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
-          {/* Card 1 */}
-          <View style={{ flex: 1, backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)', marginRight: 8 }}>
-            <MaterialIcons name="check-circle" size={28} color={COLORS.primary} style={{ marginBottom: 8 }} />
-            <Text style={{ fontSize: 20, fontWeight: '600', color: COLORS.textMain }}>24</Text>
-            <Text style={{ fontSize: 11, fontWeight: '500', color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>Audit Selesai</Text>
+        {/* ================= METRICS ROW (2 Clean Symmetric Cards) ================= */}
+        <Text style={{ fontSize: 15, fontWeight: '700', color: PALETTE.textMain, marginBottom: 12, letterSpacing: -0.2 }}>
+          Ringkasan Performa
+        </Text>
+
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+          {/* Metric 1 */}
+          <View 
+            style={{ 
+              flex: 1, 
+              backgroundColor: PALETTE.surface, 
+              borderRadius: 16, 
+              padding: 16, 
+              borderWidth: 1, 
+              borderColor: PALETTE.border,
+              shadowColor: '#0F172A',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.03,
+              shadowRadius: 6,
+              elevation: 1,
+            }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: PALETTE.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+              <MaterialIcons name={isTrainer ? "groups" : "assignment-turned-in"} size={20} color={PALETTE.primary} />
+            </View>
+            <Text style={{ fontSize: 22, fontWeight: '700', color: PALETTE.textMain, letterSpacing: -0.5 }}>
+              {isTrainer ? '18' : '24'}
+            </Text>
+            <Text style={{ fontSize: 11, fontWeight: '500', color: PALETTE.textSecondary, marginTop: 2 }}>
+              {isTrainer ? 'Sesi In-House' : 'Audit Selesai'}
+            </Text>
           </View>
-          {/* Card 2 */}
-          <View style={{ flex: 1, backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)', marginRight: 8 }}>
-            <MaterialIcons name="location-on" size={28} color={COLORS.secondary} style={{ marginBottom: 8 }} />
-            <Text style={{ fontSize: 20, fontWeight: '600', color: COLORS.textMain }}>8</Text>
-            <Text style={{ fontSize: 11, fontWeight: '500', color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>Lokasi Visit</Text>
-          </View>
-          {/* Card 3 */}
-          <View style={{ flex: 1, backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)' }}>
-            <MaterialIcons name="analytics" size={28} color={COLORS.primary} style={{ marginBottom: 8 }} />
-            <Text style={{ fontSize: 20, fontWeight: '600', color: COLORS.textMain }}>92%</Text>
-            <Text style={{ fontSize: 11, fontWeight: '500', color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>Skor Kepatuhan</Text>
-          </View>
-        </View>
 
-        {/* Audit Analytics Section */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 20, fontWeight: '600', color: COLORS.textMain, marginBottom: 16 }}>Analitik Kinerja Audit</Text>
-          
-          <View style={{ backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, textTransform: 'uppercase' }}>Skor Kepatuhan Per Dept</Text>
-              <MaterialIcons name="info-outline" size={20} color={COLORS.textSecondary} />
+          {/* Metric 2 */}
+          <View 
+            style={{ 
+              flex: 1, 
+              backgroundColor: PALETTE.surface, 
+              borderRadius: 16, 
+              padding: 16, 
+              borderWidth: 1, 
+              borderColor: PALETTE.border,
+              shadowColor: '#0F172A',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.03,
+              shadowRadius: 6,
+              elevation: 1,
+            }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+              <MaterialIcons name="verified" size={20} color="#059669" />
             </View>
-
-            {/* Dept 1 */}
-            <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontSize: 14, color: COLORS.textMain, marginBottom: 8 }}>Produksi & Gudang</Text>
-              <View style={{ height: 16, justifyContent: 'center' }}>
-                <View style={{ position: 'absolute', width: '100%', height: 8, backgroundColor: '#E5EEFF', borderRadius: 4 }} />
-                <View style={{ position: 'absolute', width: '70%', height: 16, backgroundColor: 'rgba(137,180,225,0.4)', borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }} />
-                <View style={{ position: 'absolute', width: '88%', height: 16, backgroundColor: COLORS.primary, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }} />
-              </View>
-            </View>
-
-            {/* Dept 2 */}
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 14, color: COLORS.textMain, marginBottom: 8 }}>Administrasi & HR</Text>
-              <View style={{ height: 16, justifyContent: 'center' }}>
-                <View style={{ position: 'absolute', width: '100%', height: 8, backgroundColor: '#E5EEFF', borderRadius: 4 }} />
-                <View style={{ position: 'absolute', width: '85%', height: 16, backgroundColor: 'rgba(137,180,225,0.4)', borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }} />
-                <View style={{ position: 'absolute', width: '95%', height: 16, backgroundColor: COLORS.primary, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }} />
-              </View>
-            </View>
-
-            {/* Legend */}
-            <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(190,200,206,0.2)', paddingTop: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(137,180,225,0.4)', marginRight: 6 }} />
-                <Text style={{ fontSize: 10, fontWeight: '600', color: COLORS.textSecondary, textTransform: 'uppercase' }}>Target</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.primary, marginRight: 6 }} />
-                <Text style={{ fontSize: 10, fontWeight: '600', color: COLORS.textSecondary, textTransform: 'uppercase' }}>Aktual</Text>
-              </View>
-            </View>
+            <Text style={{ fontSize: 22, fontWeight: '700', color: PALETTE.textMain, letterSpacing: -0.5 }}>
+              {isTrainer ? '94%' : '92%'}
+            </Text>
+            <Text style={{ fontSize: 11, fontWeight: '500', color: PALETTE.textSecondary, marginTop: 2 }}>
+              {isTrainer ? 'Tingkat Kelulusan' : 'Tingkat Kepatuhan'}
+            </Text>
           </View>
         </View>
 
-        {/* Recent Visit Reports */}
-        <View style={{ marginBottom: 32 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={{ fontSize: 20, fontWeight: '600', color: COLORS.textMain }}>Laporan Kunjungan</Text>
-            <TouchableOpacity>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.primary }}>Lihat Semua</Text>
-            </TouchableOpacity>
-          </View>
+        {/* ================= QUICK ACTIONS ================= */}
+        <Text style={{ fontSize: 15, fontWeight: '700', color: PALETTE.textMain, marginBottom: 12, letterSpacing: -0.2 }}>
+          Akses Cepat
+        </Text>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            {/* Report 1 */}
-            <View style={{ width: '48%', backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)', overflow: 'hidden', marginBottom: 16 }}>
-              <View style={{ height: 96, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialIcons name="checklist" size={36} color={COLORS.primary} />
-                <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(65,156,195,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.primary }}>DRAFT</Text>
-                </View>
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+          <TouchableOpacity 
+            onPress={() => router.push('/(tabs)/findings')}
+            style={{ 
+              flex: 1, 
+              backgroundColor: PALETTE.surface, 
+              borderRadius: 14, 
+              padding: 14, 
+              borderWidth: 1, 
+              borderColor: PALETTE.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: PALETTE.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialIcons name={isTrainer ? "menu-book" : "assignment-late"} size={18} color={PALETTE.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: PALETTE.textMain }}>
+                {isTrainer ? 'Modul SOP' : 'Laporan Temuan'}
+              </Text>
+              <Text style={{ fontSize: 10, color: PALETTE.textSecondary, marginTop: 1 }}>
+                {isTrainer ? 'Panduan Standar' : 'Status Perbaikan'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={() => router.push('/(tabs)/outlets')}
+            style={{ 
+              flex: 1, 
+              backgroundColor: PALETTE.surface, 
+              borderRadius: 14, 
+              padding: 14, 
+              borderWidth: 1, 
+              borderColor: PALETTE.border,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: PALETTE.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
+              <MaterialIcons name="storefront" size={18} color={PALETTE.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: PALETTE.textMain }}>
+                Semua Outlet
+              </Text>
+              <Text style={{ fontSize: 10, color: PALETTE.textSecondary, marginTop: 1 }}>
+                Daftar Cabang
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* ================= RECENT VISITS / SCHEDULE ================= */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: PALETTE.textMain, letterSpacing: -0.2 }}>
+            {isTrainer ? 'Riwayat Evaluasi Terbaru' : 'Jadwal Audit Mendatang'}
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/outlets')}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: PALETTE.primary }}>
+              Lihat Semua
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ backgroundColor: PALETTE.surface, borderRadius: 16, borderWidth: 1, borderColor: PALETTE.border, overflow: 'hidden' }}>
+          {[
+            { name: 'Outlet Grand Indonesia', date: 'Kemarin', status: isTrainer ? 'Lulus (SB)' : 'Compliant', score: '96%' },
+            { name: 'Outlet Central Park', date: '3 Hari Lalu', status: isTrainer ? 'Lulus (B)' : 'Compliant', score: '84%' },
+            { name: 'Outlet Senayan City', date: 'Besok', status: 'Jadwal Siap', score: '-' },
+          ].map((item, idx) => (
+            <View 
+              key={idx}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                paddingVertical: 13, 
+                paddingHorizontal: 16,
+                borderBottomWidth: idx < 2 ? 1 : 0, 
+                borderBottomColor: '#F1F5F9' 
+              }}
+            >
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: PALETTE.textMain }}>
+                  {item.name}
+                </Text>
+                <Text style={{ fontSize: 11, color: PALETTE.textSecondary, marginTop: 2 }}>
+                  {item.date}
+                </Text>
               </View>
-              <View style={{ padding: 12, minHeight: 80, justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textMain, marginBottom: 8 }} numberOfLines={2}>Audit Pabrik A - Tangerang</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialIcons name="location-on" size={14} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 10, fontWeight: '500', color: COLORS.textSecondary }} numberOfLines={1}>Tangerang, Banten</Text>
+
+              <View style={{ alignItems: 'flex-end' }}>
+                <View style={{ backgroundColor: item.status.includes('Lulus') || item.status === 'Compliant' ? '#ECFDF5' : '#F1F5F9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: item.status.includes('Lulus') || item.status === 'Compliant' ? '#059669' : '#64748B' }}>
+                    {item.status}
+                  </Text>
                 </View>
+                {item.score !== '-' && (
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: PALETTE.primaryDark, marginTop: 2 }}>
+                    {item.score}
+                  </Text>
+                )}
               </View>
             </View>
-
-            {/* Report 2 */}
-            <View style={{ width: '48%', backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)', overflow: 'hidden', marginBottom: 16 }}>
-              <View style={{ height: 96, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialIcons name="person-search" size={36} color={COLORS.secondary} />
-              </View>
-              <View style={{ padding: 12, minHeight: 80, justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textMain, marginBottom: 8 }} numberOfLines={2}>Visit Trainer - Warehouse B</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialIcons name="schedule" size={14} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 10, fontWeight: '500', color: COLORS.textSecondary }} numberOfLines={1}>2 Jam yang lalu</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Report 3 */}
-            <View style={{ width: '48%', backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)', overflow: 'hidden', marginBottom: 16 }}>
-              <View style={{ height: 96, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialIcons name="shield" size={36} color={COLORS.primary} />
-              </View>
-              <View style={{ padding: 12, minHeight: 80, justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textMain, marginBottom: 8 }} numberOfLines={2}>Audit Keamanan - Head Office</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialIcons name="assessment" size={14} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 10, fontWeight: '500', color: COLORS.textSecondary }} numberOfLines={1}>Skor: 95/100</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Report 4 */}
-            <View style={{ width: '48%', backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(190,200,206,0.3)', overflow: 'hidden', marginBottom: 16 }}>
-              <View style={{ height: 96, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                <MaterialIcons name="description" size={36} color={COLORS.secondary} />
-              </View>
-              <View style={{ padding: 12, minHeight: 80, justifyContent: 'space-between' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textMain, marginBottom: 8 }} numberOfLines={2}>Laporan Mingguan Wilayah I</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialIcons name="history" size={14} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 10, fontWeight: '500', color: COLORS.textSecondary }} numberOfLines={1}>Kemarin</Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>

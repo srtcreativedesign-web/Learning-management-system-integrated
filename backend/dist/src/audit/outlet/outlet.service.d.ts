@@ -20,5 +20,6 @@ export declare class OutletService {
     syncFromHRIS(): Promise<{
         success: boolean;
         message: string;
+        count: number;
     }>;
 }

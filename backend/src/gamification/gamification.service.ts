@@ -99,4 +99,32 @@ export class GamificationService {
       new_rank: newRank
     };
   }
+
+  async getRankRewards() {
+    return this.prisma.rankReward.findMany({
+      where: { is_active: true },
+      orderBy: { min_xp: 'asc' },
+    });
+  }
+
+  async getAllRankRewardsAdmin() {
+    return this.prisma.rankReward.findMany({
+      orderBy: { min_xp: 'asc' },
+    });
+  }
+
+  async updateRankReward(
+    id: string,
+    payload: {
+      reward_title?: string;
+      reward_description?: string;
+      min_xp?: number;
+      is_active?: boolean;
+    },
+  ) {
+    return this.prisma.rankReward.update({
+      where: { id },
+      data: payload,
+    });
+  }
 }

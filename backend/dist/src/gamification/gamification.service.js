@@ -103,6 +103,23 @@ let GamificationService = class GamificationService {
             new_rank: newRank
         };
     }
+    async getRankRewards() {
+        return this.prisma.rankReward.findMany({
+            where: { is_active: true },
+            orderBy: { min_xp: 'asc' },
+        });
+    }
+    async getAllRankRewardsAdmin() {
+        return this.prisma.rankReward.findMany({
+            orderBy: { min_xp: 'asc' },
+        });
+    }
+    async updateRankReward(id, payload) {
+        return this.prisma.rankReward.update({
+            where: { id },
+            data: payload,
+        });
+    }
 };
 exports.GamificationService = GamificationService;
 exports.GamificationService = GamificationService = __decorate([

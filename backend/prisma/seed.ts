@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -7,10 +8,10 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('Seeding database...');
+  console.log('Ensuring RBAC roles and master records in database...');
 
-  // 1. Create Divisions
-  const divTrainer = await prisma.divisionShadow.upsert({
+  // 1. Divisions
+  await prisma.divisionShadow.upsert({
     where: { hris_division_id: 'DIV-TND' },
     update: {},
     create: {
@@ -19,40 +20,69 @@ async function main() {
     },
   });
 
-  const divOps = await prisma.divisionShadow.upsert({
+  await prisma.divisionShadow.upsert({
     where: { hris_division_id: 'DIV-OPS' },
     update: {},
     create: {
       hris_division_id: 'DIV-OPS',
-      name: 'Operasional Gudang',
+      name: 'Operasional Gudang & Outlet',
     },
   });
 
-  // 2. Create Users
-  const trainer = await prisma.userShadow.upsert({
+  // 2. Users (RBAC)
+  await prisma.userShadow.upsert({
+    where: { email: 'admin@sobathr.com' },
+    update: { role: 'SUPER_ADMIN' },
+    create: {
+      hris_user_id: 'USR-ADMIN',
+      full_name: 'Super Admin Pusat',
+      email: 'admin@sobathr.com',
+      role: 'SUPER_ADMIN',
+      total_xp: 2500,
+      current_rank: 'Pakar SobatHR',
+    },
+  });
+
+  await prisma.userShadow.upsert({
+    where: { email: 'manager.hrbp@sobathr.com' },
+    update: { role: 'HRBP_MANAGER' },
+    create: {
+      hris_user_id: 'USR-HRBP',
+      full_name: 'Rina Agustina (HRBP Manager)',
+      email: 'manager.hrbp@sobathr.com',
+      role: 'HRBP_MANAGER',
+      total_xp: 1800,
+      current_rank: 'Master Pengetahuan',
+    },
+  });
+
+  await prisma.userShadow.upsert({
     where: { email: 'budi.trainer@sobathr.com' },
-    update: {},
+    update: { role: 'TRAINER' },
     create: {
       hris_user_id: 'USR-001',
-      full_name: 'Budi Santoso',
+      full_name: 'Budi Santoso (Trainer)',
       email: 'budi.trainer@sobathr.com',
+      role: 'TRAINER',
+      total_xp: 650,
+      current_rank: 'Karyawan Terampil',
     },
   });
 
-  const employee = await prisma.userShadow.upsert({
-    where: { email: 'andi.karyawan@sobathr.com' },
-    update: {},
+  await prisma.userShadow.upsert({
+    where: { email: 'dian.auditor@sobathr.com' },
+    update: { role: 'AUDITOR' },
     create: {
-      hris_user_id: 'USR-002',
-      full_name: 'Andi Wijaya',
-      email: 'andi.karyawan@sobathr.com',
+      hris_user_id: 'USR-003',
+      full_name: 'Dian Pratama (Auditor)',
+      email: 'dian.auditor@sobathr.com',
+      role: 'AUDITOR',
+      total_xp: 450,
+      current_rank: 'Karyawan Terampil',
     },
   });
 
-  console.log('Seeding completed!');
-  console.log('Demo Users Created:');
-  console.log(`- Trainer: ${trainer.email}`);
-  console.log(`- Employee: ${employee.email}`);
+  console.log('Database ready with authentic user data!');
 }
 
 main()

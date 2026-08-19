@@ -161,16 +161,35 @@ let QuizService = class QuizService {
         if (is_passed) {
             try {
                 const axios = require('axios');
-                await axios.post('http://localhost:8000/api/webhooks/lms/certificate-trigger', {
-                    user_id,
-                    quiz_id: quiz.id,
-                    attempt_id: attempt.id,
-                    score,
-                    is_passed,
+                const hrisUrl = (process.env.HRIS_BASE_URL || 'http://localhost:8000') + '/api/webhooks/lms/certificate-trigger';
+                const webhookPayload = {
+                    event: 'quiz.passed',
+                    data: {
+                        user_id,
+                        hris_user_id: hris_user_id || undefined,
+                        quiz_id: quiz.id,
+                        attempt_id: attempt.id,
+                        score,
+                        is_passed,
+                    },
+                };
+                axios
+                    .post(hrisUrl, webhookPayload, {
+                    timeout: 5000,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                })
+                    .then((res) => {
+                    console.log(`[Webhook] Certificate trigger sent to HRIS: HTTP ${res.status}`);
+                })
+                    .catch((err) => {
+                    console.error('[Webhook] Failed to trigger certificate webhook to HRIS:', err.message);
                 });
             }
             catch (err) {
-                console.error('Failed to trigger webhook to HRIS:', err.message);
+                console.error('[Webhook] Error initiating webhook call:', err.message);
             }
         }
         return {

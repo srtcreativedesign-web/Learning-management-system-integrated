@@ -12,12 +12,18 @@ import { QuizBuilderView } from '@/views/QuizBuilderView';
 import { EmployeeManagement } from '@/views/EmployeeManagement';
 import { OutletManagement } from '@/views/audit/OutletManagement';
 import { ChecklistBuilder } from '@/views/audit/ChecklistBuilder';
+import { InHouseChecklistBuilder } from '@/views/inhouse/InHouseChecklistBuilder';
+import { InHouseSessionsView } from '@/views/inhouse/InHouseSessionsView';
 import { LeaderboardView } from '@/views/analytics/LeaderboardView';
+import { RankRewardsView } from '@/views/analytics/RankRewardsView';
 import { QuizHistoryView } from '@/views/analytics/QuizHistoryView';
 import { TrainingAnalytics } from '@/views/analytics/TrainingAnalytics';
 import { AuditAnalytics } from '@/views/analytics/AuditAnalytics';
 import { SopViewer } from '@/views/sop/SopViewer';
 import { SopManagement } from '@/views/sop/SopManagement';
+
+import { AuthProvider } from '@/context/AuthContext';
+import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,47 +37,64 @@ const queryClient = new QueryClient({
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginView />} />
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginView />} />
 
-          {/* Authenticated Dashboard Layout */}
-          <Route element={<AppLayout />}>
-            <Route path="/dashboard" element={<DashboardView />} />
-            
-            {/* Courses & Library */}
-            <Route path="/library" element={<LibraryView />} />
-            <Route path="/library/course/:id" element={<LibraryDetailView />} />
-            <Route path="/library/generate-quiz" element={<LibraryQuizGenerate />} />
-            <Route path="/quiz-builder" element={<QuizBuilderView />} />
+            {/* Authenticated Dashboard Layout */}
+            <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<DashboardView />} />
+              
+              {/* Courses & Library (Super Admin, HRBP, Trainer) */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HRBP_MANAGER', 'TRAINER']} />}>
+                <Route path="/library" element={<LibraryView />} />
+                <Route path="/library/course/:id" element={<LibraryDetailView />} />
+                <Route path="/library/generate-quiz" element={<LibraryQuizGenerate />} />
+                <Route path="/quiz-builder" element={<QuizBuilderView />} />
+                <Route path="/in-house/checklists" element={<InHouseChecklistBuilder />} />
+                <Route path="/in-house/sessions" element={<InHouseSessionsView />} />
+                <Route path="/analytics/quiz-history" element={<QuizHistoryView />} />
+                <Route path="/analytics/training/in-class" element={<TrainingAnalytics />} />
+                <Route path="/analytics/training/on-site" element={<TrainingAnalytics />} />
+                <Route path="/analytics/training/online" element={<TrainingAnalytics />} />
+              </Route>
 
-            {/* Employees */}
-            <Route path="/employees" element={<EmployeeManagement />} />
+              {/* Employees (Super Admin, HRBP, Trainer) */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HRBP_MANAGER', 'TRAINER']} />}>
+                <Route path="/employees" element={<EmployeeManagement />} />
+              </Route>
 
-            {/* Audit */}
-            <Route path="/outlets" element={<OutletManagement />} />
-            <Route path="/checklist-builder" element={<ChecklistBuilder />} />
-            <Route path="/audit-reports" element={<AuditAnalytics />} />
+              {/* Audit Lapangan (Super Admin, HRBP, Auditor) */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HRBP_MANAGER', 'AUDITOR']} />}>
+                <Route path="/outlets" element={<OutletManagement />} />
+                <Route path="/checklist-builder" element={<ChecklistBuilder />} />
+                <Route path="/audit-reports" element={<AuditAnalytics />} />
+                <Route path="/analytics/audit" element={<AuditAnalytics />} />
+              </Route>
 
-            {/* Analytics */}
-            <Route path="/analytics/leaderboard" element={<LeaderboardView />} />
-            <Route path="/analytics/quiz-history" element={<QuizHistoryView />} />
-            <Route path="/analytics/training/in-class" element={<TrainingAnalytics />} />
-            <Route path="/analytics/training/on-site" element={<TrainingAnalytics />} />
-            <Route path="/analytics/training/online" element={<TrainingAnalytics />} />
-            <Route path="/analytics/audit" element={<AuditAnalytics />} />
+              {/* Gamification & Leaderboard (Super Admin, HRBP, Trainer) */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HRBP_MANAGER', 'TRAINER']} />}>
+                <Route path="/analytics/leaderboard" element={<LeaderboardView />} />
+                <Route path="/analytics/rank-rewards" element={<RankRewardsView />} />
+              </Route>
 
-            {/* SOP */}
-            <Route path="/sop/viewer" element={<SopViewer />} />
-            <Route path="/sop/management" element={<SopManagement />} />
-          </Route>
+              {/* SOP Viewer (All Roles) */}
+              <Route path="/sop/viewer" element={<SopViewer />} />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
+              {/* SOP Management / Upload (Super Admin, HRBP) */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HRBP_MANAGER']} />}>
+                <Route path="/sop/management" element={<SopManagement />} />
+              </Route>
+            </Route>
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

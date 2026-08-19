@@ -30,6 +30,15 @@ let GamificationController = class GamificationController {
     async adjustXp(payload) {
         return this.gamificationService.adjustXp(payload);
     }
+    async getRankRewards() {
+        return this.gamificationService.getRankRewards();
+    }
+    async getAllRankRewardsAdmin() {
+        return this.gamificationService.getAllRankRewardsAdmin();
+    }
+    async updateRankReward(id, payload) {
+        return this.gamificationService.updateRankReward(id, payload);
+    }
 };
 exports.GamificationController = GamificationController;
 __decorate([
@@ -56,6 +65,29 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], GamificationController.prototype, "adjustXp", null);
+__decorate([
+    (0, common_1.Get)('rank-rewards'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get reward list per rank/level' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], GamificationController.prototype, "getRankRewards", null);
+__decorate([
+    (0, common_1.Get)('admin/rank-rewards'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all rank rewards for admin panel' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], GamificationController.prototype, "getAllRankRewardsAdmin", null);
+__decorate([
+    (0, common_1.Post)('admin/rank-rewards/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update a rank reward' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], GamificationController.prototype, "updateRankReward", null);
 exports.GamificationController = GamificationController = __decorate([
     (0, swagger_1.ApiTags)('Gamification'),
     (0, common_1.Controller)('api/gamification'),

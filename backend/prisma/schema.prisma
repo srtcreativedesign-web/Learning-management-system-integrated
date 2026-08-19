@@ -19,6 +19,7 @@ model UserShadow {
   hris_user_id   String                   @unique
   full_name      String
   email          String                   @unique
+  role           String                   @default("AUDITOR") // SUPER_ADMIN | HRBP_MANAGER | TRAINER | AUDITOR
   join_date      DateTime?
   total_xp       Int                      @default(0)
   current_rank   String                   @default("Pemula")
@@ -273,4 +274,78 @@ model XpAuditTrail {
 
   @@map("xp_audit_trails")
 }
+
+// F. Gamification Rank Rewards
+model RankReward {
+  id                 String   @id @default(uuid())
+  rank_name          String   @unique
+  min_xp             Int
+  reward_title       String
+  reward_description String?
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  @@map("rank_rewards")
+}
+
+// G. In-House Training
+model InHouseCategory {
+  id         String                 @id @default(uuid())
+  name       String
+  sort_order Int                    @default(0)
+  checklists InHouseChecklistPoint[]
+
+  @@map("in_house_categories")
+}
+
+model InHouseChecklistPoint {
+  id          String                 @id @default(uuid())
+  category_id String
+  question    String
+  description String?                @db.Text
+  max_score   Int                    @default(5)
+  sort_order  Int                    @default(0)
+
+  category    InHouseCategory        @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  assessments InHouseAssessmentItem[]
+
+  @@map("in_house_checklist_points")
+}
+
+model InHouseSession {
+  id             String                  @id @default(uuid())
+  trainer_name   String?
+  outlet_id      String?
+  trainee_name   String?
+  training_date  DateTime                @default(now())
+  status         String                  @default("completed") // draft / completed
+  total_score    Float                   @default(0)
+  max_score      Float                   @default(0)
+  percentage     Float                   @default(0)
+  grade          String                  @default("C") // SB, B, C, K
+  is_passed      Boolean                 @default(false)
+  notes          String?                 @db.Text
+  created_at     DateTime                @default(now())
+  updated_at     DateTime                @updatedAt
+  
+  assessments    InHouseAssessmentItem[]
+
+  @@map("in_house_sessions")
+}
+
+model InHouseAssessmentItem {
+  id                 String                @id @default(uuid())
+  session_id         String
+  checklist_point_id String
+  score              Int                   @default(0) // 1 - 5
+  grade              String                @default("C") // SB, B, C, K
+  notes              String?               @db.Text
+
+  session            InHouseSession        @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  checklistPoint     InHouseChecklistPoint @relation(fields: [checklist_point_id], references: [id], onDelete: Cascade)
+
+  @@map("in_house_assessment_items")
+}
+
 
