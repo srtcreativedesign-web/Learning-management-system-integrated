@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, LogIn, ShieldCheck } from 'lucide-react';
+import logoTnd from '@/assets/logo tnd.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
@@ -46,8 +47,8 @@ export const LoginView: React.FC = () => {
       <main className="relative z-10 w-full max-w-md">
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="mb-3 flex items-center justify-center w-14 h-14 bg-[#419CC3]/10 rounded-2xl shadow-sm text-[#419CC3]">
-            <Building2 className="w-7 h-7" />
+          <div className="mb-3 flex items-center justify-center w-16 h-16 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+            <img src={logoTnd} alt="TND Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-extrabold text-[#419CC3] tracking-tight">TND SYSTEM</h1>
           <p className="text-xs text-slate-500 mt-0.5">Sistem Terintegrasi LMS, In-House Training & Audit</p>

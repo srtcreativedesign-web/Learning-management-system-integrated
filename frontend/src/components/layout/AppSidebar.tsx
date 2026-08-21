@@ -33,6 +33,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { canAccessTraining, canAccessAudit, canAccessAll, ROLE_BADGES, UserRole } from '@/types/auth';
+import logoTnd from '@/assets/logo tnd.png';
 
 export const AppSidebar: React.FC = () => {
   const location = useLocation();
@@ -76,8 +77,8 @@ export const AppSidebar: React.FC = () => {
       {/* Header */}
       <SidebarHeader className="p-3 border-b border-slate-100 flex items-center justify-between group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 bg-[#419CC3]/10 text-[#419CC3] rounded-lg flex items-center justify-center font-bold shrink-0">
-            <Building2 className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0 bg-slate-50 border border-slate-200/80 p-0.5">
+            <img src={logoTnd} alt="TND Logo" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
             <h1 className="font-bold text-xs text-slate-800 tracking-tight truncate leading-tight">
