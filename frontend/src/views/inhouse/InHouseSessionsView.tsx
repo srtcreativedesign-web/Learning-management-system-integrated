@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   GraduationCap,
   Plus,
@@ -17,12 +17,21 @@ import {
   User,
   Calculator,
   X,
+  Printer,
+  FileText,
+  Clock,
+  Check,
+  Sparkles,
+  MessageSquare,
+  ChevronRight,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { getApiUrl } from '@/lib/api';
+import { printEvaluationReport } from '@/utils/printEvaluationReport';
 
 interface AssessmentItem {
   id?: string;
@@ -31,10 +40,15 @@ interface AssessmentItem {
   grade: string;
   notes?: string;
   checklistPoint?: {
+    id?: string;
     question: string;
     description?: string;
+    max_score?: number;
+    category_id?: string;
     category?: {
+      id?: string;
       name: string;
+      sort_order?: number;
     };
   };
 }
@@ -51,6 +65,9 @@ interface InHouseSession {
   percentage: number;
   grade: 'SB' | 'B' | 'C' | 'K';
   is_passed: boolean;
+  pic_name?: string;
+  trainer_signature?: string;
+  pic_signature?: string;
   notes?: string;
   assessments?: AssessmentItem[];
 }
@@ -231,6 +248,85 @@ export const InHouseSessionsView: React.FC = () => {
     return matchesSearch && matchesOutlet;
   });
 
+  // Group assessments by Category for selectedSession
+  const groupedAssessments = useMemo(() => {
+    if (!selectedSession?.assessments) return [];
+
+    const categoryMap = new Map<
+      string,
+      {
+        categoryId: string;
+        categoryName: string;
+        sortOrder: number;
+        items: AssessmentItem[];
+        totalScore: number;
+        maxScore: number;
+      }
+    >();
+
+    selectedSession.assessments.forEach((item) => {
+      const catId = item.checklistPoint?.category?.id || item.checklistPoint?.category_id || 'general';
+      const catName = item.checklistPoint?.category?.name || 'Kategori Umum';
+      const sortOrder = item.checklistPoint?.category?.sort_order ?? 999;
+      const pointMax = item.checklistPoint?.max_score || 5;
+
+      if (!categoryMap.has(catId)) {
+        categoryMap.set(catId, {
+          categoryId: catId,
+          categoryName: catName,
+          sortOrder,
+          items: [],
+          totalScore: 0,
+          maxScore: 0,
+        });
+      }
+
+      const group = categoryMap.get(catId)!;
+      group.items.push(item);
+      group.totalScore += item.score;
+      group.maxScore += pointMax;
+    });
+
+    return Array.from(categoryMap.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [selectedSession]);
+
+  const getPointGradeBadge = (grade: string, score: number) => {
+    switch (grade) {
+      case 'SB':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <Award className="w-3 h-3 text-emerald-600" /> SB (Sangat Baik: {score})
+          </span>
+        );
+      case 'B':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-black bg-sky-100 text-sky-800 border border-sky-300">
+            <CheckCircle2 className="w-3 h-3 text-sky-600" /> B (Baik: {score})
+          </span>
+        );
+      case 'C':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+            C (Cukup: {score})
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+            <XCircle className="w-3 h-3 text-rose-600" /> K (Kurang: {score})
+          </span>
+        );
+    }
+  };
+
+  const handlePrint = (sessionToPrint?: InHouseSession) => {
+    const target = sessionToPrint || selectedSession;
+    if (target) {
+      const outletName = outlets.find((o) => o.id === target.outlet_id)?.name || 'Outlet Cabang';
+      printEvaluationReport(target, outletName);
+    }
+  };
+
   const getGradeBadge = (grade: string) => {
     switch (grade) {
       case 'SB':
@@ -265,12 +361,12 @@ export const InHouseSessionsView: React.FC = () => {
       {/* Header */}
       <PageHeader
         title="Evaluasi & Sesi In-House Training"
-        subtitle="Rekapitulasi hasil penilaian on-site training staf outlet dengan predikat SB, B, C, K & kalkulasi otomatis"
+        subtitle="Rekapitulasi hasil penilaian on-site training staf outlet dengan predikat SB, B, C, K & rincian butir penilaian"
         icon={<GraduationCap className="w-7 h-7" />}
         actions={
           <Button
             onClick={openNewAssessmentModal}
-            className="gap-2 bg-[#419CC3] hover:bg-[#3582a3] text-white shadow-sm"
+            className="gap-2 bg-[#419CC3] hover:bg-[#3582a3] text-white shadow-sm font-semibold"
           >
             <Plus className="w-4 h-4" />
             Input Penilaian Training Baru
@@ -359,10 +455,16 @@ export const InHouseSessionsView: React.FC = () => {
 
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-800">{session.trainee_name}</div>
+                        <div className="text-[11px] text-slate-400">
+                          {session.assessments?.length || 0} butir penilaian
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <div className="text-slate-600">{session.trainer_name}</div>
+                        <div className="text-slate-600 font-medium flex items-center gap-1">
+                          <User className="w-3 h-3 text-slate-400" />
+                          {session.trainer_name}
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
@@ -394,10 +496,20 @@ export const InHouseSessionsView: React.FC = () => {
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePrint(session)}
+                            className="h-8 px-2.5 text-xs text-slate-700 hover:text-[#419CC3] hover:border-[#419CC3] font-semibold border-slate-200"
+                            title="Cetak Berita Acara & Laporan PDF Resmi"
+                          >
+                            <Printer className="w-3.5 h-3.5 mr-1" />
+                            PDF
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedSession(session)}
-                            className="h-8 px-2.5 text-xs text-[#419CC3] hover:bg-[#419CC3]/10"
+                            className="h-8 px-2.5 text-xs text-[#419CC3] hover:bg-[#419CC3]/10 font-bold"
                           >
                             <Eye className="w-3.5 h-3.5 mr-1" />
                             Detail
@@ -407,6 +519,7 @@ export const InHouseSessionsView: React.FC = () => {
                             size="sm"
                             onClick={() => handleDeleteSession(session.id)}
                             className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                            title="Hapus Rekap"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
@@ -547,10 +660,13 @@ export const InHouseSessionsView: React.FC = () => {
               {/* Checklist Items Accordion */}
               <div className="space-y-5">
                 {categories.map((cat, catIdx) => (
-                  <div key={cat.id || catIdx} className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div key={cat.id || catIdx} className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
                     <div className="bg-slate-100/80 px-4 py-2.5 font-bold text-xs text-slate-800 border-b border-slate-200 flex items-center justify-between">
-                      <span>
-                        {catIdx + 1}. {cat.name}
+                      <span className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-[#419CC3] text-white flex items-center justify-center text-[10px] font-bold">
+                          {catIdx + 1}
+                        </span>
+                        {cat.name}
                       </span>
                       <span className="text-[11px] text-slate-500 font-medium">
                         {cat.checklists?.length || 0} butir
@@ -564,49 +680,68 @@ export const InHouseSessionsView: React.FC = () => {
                         return (
                           <div
                             key={point.id || pIdx}
-                            className="p-3 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                            className="p-3 rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-slate-50 transition-all space-y-2.5"
                           >
-                            <div className="flex-1">
-                              <h5 className="font-semibold text-xs text-slate-800">
-                                {pIdx + 1}. {point.question}
-                              </h5>
-                              {point.description && (
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                  {point.description}
-                                </p>
-                              )}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                              <div className="flex-1">
+                                <h5 className="font-bold text-xs text-slate-800">
+                                  {pIdx + 1}. {point.question}
+                                </h5>
+                                {point.description && (
+                                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed bg-white/80 p-2 rounded-lg border border-slate-200/60">
+                                    <strong className="text-slate-700">Kriteria Standar:</strong> {point.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Scoring Buttons (SB, B, C, K) */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {[
+                                  { label: 'SB (5)', score: 5, color: 'hover:border-emerald-500 active:bg-emerald-50' },
+                                  { label: 'B (4)', score: 4, color: 'hover:border-sky-500 active:bg-sky-50' },
+                                  { label: 'C (3)', score: 3, color: 'hover:border-amber-500 active:bg-amber-50' },
+                                  { label: 'K (1)', score: 1, color: 'hover:border-rose-500 active:bg-rose-50' },
+                                ].map((btn) => {
+                                  const isSelected = currentScore === btn.score;
+                                  return (
+                                    <button
+                                      key={btn.score}
+                                      type="button"
+                                      onClick={() => handleScoreChange(point.id, btn.score)}
+                                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                        isSelected
+                                          ? btn.score === 5
+                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                            : btn.score === 4
+                                            ? 'bg-[#419CC3] text-white border-[#419CC3] shadow-sm'
+                                            : btn.score === 3
+                                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                                            : 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                                          : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      {btn.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
 
-                            {/* Scoring Buttons (SB, B, C, K) */}
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {[
-                                { label: 'SB (5)', score: 5, color: 'hover:border-emerald-500 active:bg-emerald-50' },
-                                { label: 'B (4)', score: 4, color: 'hover:border-sky-500 active:bg-sky-50' },
-                                { label: 'C (3)', score: 3, color: 'hover:border-amber-500 active:bg-amber-50' },
-                                { label: 'K (1)', score: 1, color: 'hover:border-rose-500 active:bg-rose-50' },
-                              ].map((btn) => {
-                                const isSelected = currentScore === btn.score;
-                                return (
-                                  <button
-                                    key={btn.score}
-                                    type="button"
-                                    onClick={() => handleScoreChange(point.id, btn.score)}
-                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                      isSelected
-                                        ? btn.score === 5
-                                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                                          : btn.score === 4
-                                          ? 'bg-[#419CC3] text-white border-[#419CC3] shadow-sm'
-                                          : btn.score === 3
-                                          ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                                          : 'bg-rose-600 text-white border-rose-600 shadow-sm'
-                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
-                                    }`}
-                                  >
-                                    {btn.label}
-                                  </button>
-                                );
-                              })}
+                            {/* Point Specific Note */}
+                            <div className="pt-1.5 border-t border-slate-200/50 flex items-center gap-2">
+                              <MessageSquare className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <input
+                                type="text"
+                                value={formItemNotes[point.id] || ''}
+                                onChange={(e) =>
+                                  setFormItemNotes((prev) => ({
+                                    ...prev,
+                                    [point.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder="Tambah catatan spesifik untuk butir ini (opsional)..."
+                                className="text-[11px] w-full bg-transparent border-b border-dashed border-slate-300 focus:border-[#419CC3] focus:outline-none py-0.5 text-slate-700 placeholder:text-slate-400"
+                              />
                             </div>
                           </div>
                         );
@@ -619,7 +754,7 @@ export const InHouseSessionsView: React.FC = () => {
               {/* Trainer Notes */}
               <div>
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1.5">
-                  Catatan Evaluasi / Rekomendasi Trainer
+                  Catatan Evaluasi & Rekomendasi Keseluruhan Trainer
                 </label>
                 <textarea
                   value={formNotes}
@@ -663,52 +798,138 @@ export const InHouseSessionsView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: Detail Sesi Penilaian */}
+      {/* MODAL: Detail Sesi Penilaian (Detail Point Penilaian Lengkap) */}
       {selectedSession && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden print:m-0 print:max-w-none print:w-full print:max-h-none print:shadow-none print:border-none">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50 print:bg-white">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#419CC3]/15 text-[#419CC3] flex items-center justify-center font-bold">
-                  <GraduationCap className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-[#419CC3]/15 text-[#419CC3] flex items-center justify-center font-bold">
+                  <GraduationCap className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Detail Laporan In-House Training</h3>
-                  <p className="text-xs text-slate-500">
-                    Peserta: <strong className="text-slate-800">{selectedSession.trainee_name}</strong>
+                  <h3 className="font-extrabold text-slate-900 text-base">
+                    Laporan Lengkap & Detail Point Hasil Evaluasi Training
+                  </h3>
+                  <p className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                    <span>
+                      Peserta: <strong className="text-slate-800">{selectedSession.trainee_name}</strong>
+                    </span>
+                    <span>•</span>
+                    <span>
+                      Trainer: <strong className="text-slate-800">{selectedSession.trainer_name}</strong>
+                    </span>
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedSession(null)}
-                className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2 print:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePrint(selectedSession)}
+                  className="h-8 px-2.5 text-xs text-slate-700 hover:text-[#419CC3] hover:border-[#419CC3] border-slate-200 font-semibold"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1" />
+                  Cetak PDF Resmi
+                </Button>
+                <button
+                  onClick={() => setSelectedSession(null)}
+                  className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5">
-              {/* Score Highlight Card */}
-              <div className="p-4 bg-[#419CC3]/5 border border-[#419CC3]/20 rounded-xl flex items-center justify-between text-slate-800">
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Session Meta Info */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
                 <div>
-                  <span className="text-[10px] text-[#3484a6] font-bold uppercase tracking-wider block">
-                    Hasil Akhir
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                    Outlet Cabang
                   </span>
-                  <span className="text-xs text-slate-600 font-medium">
-                    Skor: <strong className="text-slate-900 font-bold">{selectedSession.total_score}</strong> / {selectedSession.max_score} Poin
-                  </span>
+                  <div className="font-bold text-slate-800 flex items-center gap-1 mt-0.5 truncate">
+                    <Store className="w-3.5 h-3.5 text-[#419CC3] shrink-0" />
+                    {outlets.find((o) => o.id === selectedSession.outlet_id)?.name || 'Outlet Umum'}
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                    Tanggal Pelaksanaan
+                  </span>
+                  <div className="font-bold text-slate-800 flex items-center gap-1 mt-0.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#419CC3] shrink-0" />
+                    {new Date(selectedSession.training_date).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                    Status Kelulusan
+                  </span>
+                  <div className="mt-0.5">
+                    {selectedSession.is_passed ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" /> LULUS
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300">
+                        <XCircle className="w-3 h-3 text-rose-600" /> RETRAINING
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                    Total Butir Dinilai
+                  </span>
+                  <div className="font-bold text-slate-800 mt-0.5">
+                    {selectedSession.assessments?.length || 0} Butir Penilaian
+                  </div>
+                </div>
+              </div>
+
+              {/* Score Highlight Card */}
+              <div className="p-4 bg-linear-to-r from-[#419CC3]/10 via-sky-50/50 to-emerald-50/30 border border-[#419CC3]/20 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-slate-800">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-[#3484a6] font-extrabold uppercase tracking-wider block flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#419CC3]" /> Hasil Evaluasi Akhir
+                  </span>
+                  <div className="text-sm text-slate-700 font-medium">
+                    Skor Diperoleh:{' '}
+                    <strong className="text-slate-900 font-extrabold text-base">
+                      {selectedSession.total_score}
+                    </strong>{' '}
+                    / {selectedSession.max_score} Poin Maksimal
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Standar kelulusan minimum adalah 70.0% (Predikat B / SB)
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-5 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200/60">
                   <div className="text-right">
-                    <span className="text-[11px] text-slate-500 block font-medium">Persentase</span>
-                    <span className="text-xl font-black text-[#419CC3]">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                      Persentase
+                    </span>
+                    <span className="text-2xl font-black text-[#419CC3]">
                       {selectedSession.percentage}%
                     </span>
                   </div>
-                  <div className="border-l border-slate-200 pl-4 text-right">
-                    <span className="text-[11px] text-slate-500 block font-medium">Predikat</span>
+                  <div className="border-l border-slate-300 pl-5 text-right">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                      Predikat
+                    </span>
                     <span
-                      className={`text-xl font-black ${
+                      className={`text-2xl font-black ${
                         selectedSession.grade === 'SB'
                           ? 'text-emerald-600'
                           : selectedSession.grade === 'B'
@@ -724,58 +945,169 @@ export const InHouseSessionsView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Assessment Breakdown */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider">
-                  Rincian Penilaian Checklist
-                </h4>
-
-                <div className="space-y-2">
-                  {selectedSession.assessments?.map((item, idx) => (
-                    <div
-                      key={item.id || idx}
-                      className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div>
-                        <div className="font-bold text-slate-800">
-                          {item.checklistPoint?.question || `Kriteria #${idx + 1}`}
-                        </div>
-                        {item.checklistPoint?.category?.name && (
-                          <div className="text-[10px] text-slate-400 mt-0.5">
-                            {item.checklistPoint.category.name}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 font-bold">
-                        <span className="text-slate-500">Nilai: {item.score}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[11px] font-extrabold ${
-                            item.grade === 'SB'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : item.grade === 'B'
-                              ? 'bg-sky-100 text-sky-800'
-                              : item.grade === 'C'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}
-                        >
-                          {item.grade}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+              {/* Skala Penilaian Reference Legend */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 mb-2">
+                  <Info className="w-3.5 h-3.5 text-[#419CC3]" /> Skala & Rubrik Penilaian:
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <span className="font-extrabold text-emerald-800">SB (5):</span>
+                    <span className="text-emerald-700">Sangat Baik</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-sky-50 border border-sky-200">
+                    <span className="font-extrabold text-sky-800">B (4):</span>
+                    <span className="text-sky-700">Baik / Standar</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-amber-50 border border-amber-200">
+                    <span className="font-extrabold text-amber-800">C (3):</span>
+                    <span className="text-amber-700">Cukup (Perlu Review)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1.5 rounded-lg bg-rose-50 border border-rose-200">
+                    <span className="font-extrabold text-rose-800">K (1):</span>
+                    <span className="text-rose-700">Kurang / Retraining</span>
+                  </div>
                 </div>
               </div>
 
+              {/* Grouped Assessment Breakdown by Category */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-[#419CC3]" /> Rincian Detail Point Penilaian per Kategori
+                  </h4>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {groupedAssessments.length} Kategori
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {groupedAssessments.map((group, gIdx) => {
+                    const groupPercentage =
+                      group.maxScore > 0
+                        ? parseFloat(((group.totalScore / group.maxScore) * 100).toFixed(1))
+                        : 0;
+
+                    return (
+                      <div
+                        key={group.categoryId || gIdx}
+                        className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs bg-white"
+                      >
+                        {/* Category Header */}
+                        <div className="bg-slate-100/90 px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-[#419CC3] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                              {gIdx + 1}
+                            </span>
+                            <span className="font-bold text-xs text-slate-800">
+                              {group.categoryName}
+                            </span>
+                            <span className="text-[11px] text-slate-500 font-medium">
+                              ({group.items.length} butir)
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-3 self-end sm:self-auto text-xs font-bold">
+                            <span className="text-slate-600">
+                              Subtotal:{' '}
+                              <strong className="text-slate-900 font-extrabold">
+                                {group.totalScore}
+                              </strong>{' '}
+                              / {group.maxScore}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-[#419CC3]/10 text-[#419CC3] text-[11px]">
+                              {groupPercentage}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Category Items List */}
+                        <div className="p-3.5 space-y-3 divide-y divide-slate-100">
+                          {group.items.map((item, pIdx) => {
+                            const pointMax = item.checklistPoint?.max_score || 5;
+
+                            return (
+                              <div
+                                key={item.id || pIdx}
+                                className={`p-3 rounded-xl transition-colors space-y-2 ${
+                                  pIdx > 0 ? 'pt-3' : ''
+                                } hover:bg-slate-50/80`}
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                  <div className="flex-1 space-y-1">
+                                    <div className="font-bold text-xs text-slate-800 flex items-start gap-2">
+                                      <span className="text-slate-400 font-semibold shrink-0">
+                                        {pIdx + 1}.
+                                      </span>
+                                      <span>
+                                        {item.checklistPoint?.question || `Butir Penilaian #${pIdx + 1}`}
+                                      </span>
+                                    </div>
+
+                                    {item.checklistPoint?.description && (
+                                      <div className="text-[11px] text-slate-600 ml-5 bg-slate-50 p-2.5 rounded-lg border border-slate-200/70 leading-relaxed">
+                                        <span className="font-semibold text-slate-700 block mb-0.5">
+                                          Standar Kriteria Penilaian:
+                                        </span>
+                                        {item.checklistPoint.description}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                                    <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
+                                      {item.score} / {pointMax} Poin
+                                    </span>
+                                    {getPointGradeBadge(item.grade, item.score)}
+                                  </div>
+                                </div>
+
+                                {item.notes && (
+                                  <div className="ml-5 flex items-start gap-1.5 p-2 bg-amber-50/70 border border-amber-200/70 rounded-lg text-[11px] text-amber-900">
+                                    <MessageSquare className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                    <div>
+                                      <strong className="font-bold">Catatan Khusus:</strong> {item.notes}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Overall Trainer Notes */}
               {selectedSession.notes && (
-                <div className="p-4 bg-amber-50/60 border border-amber-200/80 rounded-xl">
-                  <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider block mb-1">
-                    Catatan Trainer
+                <div className="p-4 bg-amber-50/70 border border-amber-200/90 rounded-2xl space-y-1.5">
+                  <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider block flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+                    Catatan Evaluasi & Rekomendasi Trainer
                   </span>
                   <p className="text-xs text-slate-700 leading-relaxed">{selectedSession.notes}</p>
                 </div>
               )}
+
+              {/* Modal Footer actions */}
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-between print:hidden">
+                <Button
+                  variant="outline"
+                  onClick={() => handlePrint(selectedSession)}
+                  className="text-xs gap-1.5 text-slate-700 hover:text-[#419CC3] hover:border-[#419CC3] font-semibold"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1" />
+                  Cetak Berita Acara & Laporan PDF Resmi
+                </Button>
+                <Button
+                  onClick={() => setSelectedSession(null)}
+                  className="bg-[#419CC3] hover:bg-[#3582a3] text-white text-xs font-semibold"
+                >
+                  Tutup Rincian
+                </Button>
+              </div>
             </div>
           </div>
         </div>

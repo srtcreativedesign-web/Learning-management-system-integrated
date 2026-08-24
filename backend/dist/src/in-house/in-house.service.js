@@ -249,6 +249,9 @@ let InHouseService = class InHouseService {
                 percentage,
                 grade: overallGrade,
                 is_passed: isPassed,
+                pic_name: payload.pic_name || null,
+                trainer_signature: payload.trainer_signature || null,
+                pic_signature: payload.pic_signature || null,
                 notes: payload.notes || null,
                 assessments: {
                     create: assessmentData

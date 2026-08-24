@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, TextInput, Platform, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, TextInput, RefreshControl } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { fetchSopsApi } from '../../src/services/api';
+import { BrandHeader } from '../../src/components/ui/BrandHeader';
+import { Card } from '../../src/components/ui/Card';
+import { Segmented } from '../../src/components/ui/Segmented';
+import { GradeBadge } from '../../src/components/ui/GradeBadge';
+import { COLORS, RADIUS, SHADOW, TYPE } from '../../src/theme';
 
 interface SopPoint {
   id: string;
@@ -49,8 +54,21 @@ export default function FindingsScreen() {
     }
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   useEffect(() => {
     loadSops();
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      setSops(await fetchSopsApi());
+    } catch {
+      // keep the previously loaded list on failure
+    } finally {
+      setIsRefreshing(false);
+    }
   }, []);
 
   const filteredSops = sops.filter((s) => {
@@ -59,295 +77,407 @@ export default function FindingsScreen() {
     return matchesCat && matchesSearch;
   });
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+  const RUBRIC = [
+    {
+      grade: 'SB',
+      title: 'Sangat Baik',
+      score: 'Skor 5',
+      headline: 'Memenuhi 100% SOP + proaktif',
+      body: 'Staf melakukan langkah kerja dengan sempurna, konsisten, cepat, dan menunjukkan inisiatif pelayanan terbaik tanpa perlu supervisi.',
+    },
+    {
+      grade: 'B',
+      title: 'Baik',
+      score: 'Skor 4',
+      headline: 'Sesuai standar SOP minimum',
+      body: 'Staf menjalankan instruksi kerja dengan tepat dan benar, namun sesekali membutuhkan panduan minor pada situasi sibuk.',
+    },
+    {
+      grade: 'C',
+      title: 'Cukup',
+      score: 'Skor 3',
+      headline: 'Butuh pengawasan berkala',
+      body: 'Terdapat beberapa kelalaian kecil dalam urutan kerja atau kebersihan workstation, perlu supervisi berkala dari Store Manager.',
+    },
+    {
+      grade: 'K',
+      title: 'Kurang',
+      score: 'Skor 1 - 2',
+      headline: 'Wajib re-training',
+      body: 'Tidak memenuhi standar higienitas/SOP, berpotensi menurunkan kualitas rasa atau kepuasan pelanggan. Wajib dijadwalkan training ulang.',
+    },
+  ];
 
-      {/* Header Bar */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
-        <View className="flex-row items-center justify-between">
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#0B1C30', letterSpacing: -0.4 }}>
-            {isTrainer ? 'Pustaka SOP & Standar Kerja' : 'Laporan Temuan Audit'}
-          </Text>
-          {isTrainer && (
+  const OPEN_FINDINGS = [
+    { title: 'Alat pemadam kebakaran (APAR) kedaluwarsa', outlet: 'Outlet Sudirman', category: 'K3 & Keselamatan', date: '7 Juli 2026', isRecurring: false },
+    { title: 'SOP tidak dipasang di area kasir & kitchen', outlet: 'Outlet Tangerang', category: 'Operasional', date: '6 Juli 2026', isRecurring: true },
+    { title: 'Suhu chiller penyimpanan di luar batas toleransi', outlet: 'Outlet Kemang', category: 'Quality Assurance', date: '5 Juli 2026', isRecurring: false },
+    { title: 'Dokumen izin sanitasi belum diperbarui', outlet: 'Outlet BSD City', category: 'Legalitas', date: '4 Juli 2026', isRecurring: false },
+    { title: 'Pekerja tidak menggunakan celemek & hairnet', outlet: 'Outlet Kelapa Gading', category: 'Higienitas', date: '3 Juli 2026', isRecurring: true },
+  ];
+
+  return (
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <BrandHeader
+        title={isTrainer ? 'Pustaka SOP' : 'Temuan Audit'}
+        subtitle={
+          isTrainer
+            ? 'Standar kerja resmi yang diunggah dari Web Admin'
+            : 'Ketidaksesuaian hasil inspeksi lapangan'
+        }
+        right={
+          isTrainer ? (
             <TouchableOpacity
               onPress={loadSops}
-              className="p-1.5 bg-white border border-slate-200 rounded-lg"
+              accessibilityLabel="Muat ulang daftar SOP"
               activeOpacity={0.7}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: 'rgba(255,255,255,0.14)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <MaterialIcons name="refresh" size={18} color="#419CC3" />
+              <MaterialIcons name="refresh" size={21} color={COLORS.onBrand} />
             </TouchableOpacity>
+          ) : undefined
+        }
+      >
+        <View style={{ marginTop: 20 }}>
+          {isTrainer ? (
+            <Segmented
+              onBrand
+              value={trainerTab}
+              onChange={setTrainerTab}
+              options={[
+                { value: 'modules', label: `Dokumen (${sops.length})` },
+                { value: 'rubric', label: 'Skala SB/B/C/K' },
+              ]}
+            />
+          ) : (
+            <Segmented
+              onBrand
+              value={auditTab}
+              onChange={setAuditTab}
+              options={[
+                { value: 'open', label: 'Temuan Terbuka (5)' },
+                { value: 'recurring', label: 'Berulang (3)' },
+              ]}
+            />
           )}
         </View>
-        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-          {isTrainer ? 'Dokumen SOP resmi yang diunggah dari Web Admin' : 'Daftar ketidaksesuaian hasil inspeksi lapangan'}
-        </Text>
-      </View>
+      </BrandHeader>
 
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 130 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
       >
-
         {isTrainer ? (
           /* ================= TRAINER VIEW ================= */
-          <>
-            {/* Trainer Tab Switcher */}
-            <View className="flex-row bg-white rounded-xl p-1 border border-slate-200 mb-4">
-              <TouchableOpacity 
-                className={`flex-1 py-2.5 rounded-lg items-center ${trainerTab === 'modules' ? 'bg-[#419CC3]' : ''}`}
-                onPress={() => setTrainerTab('modules')}
+          trainerTab === 'modules' ? (
+            <View style={{ gap: 12 }}>
+              {/* Search */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  backgroundColor: COLORS.surface,
+                  borderRadius: RADIUS.pill,
+                  paddingHorizontal: 18,
+                  minHeight: 52,
+                  ...SHADOW.card,
+                }}
               >
-                <Text className={`font-bold text-xs ${trainerTab === 'modules' ? 'text-white' : 'text-slate-600'}`}>
-                  Dokumen SOP ({sops.length})
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className={`flex-1 py-2.5 rounded-lg items-center ${trainerTab === 'rubric' ? 'bg-[#419CC3]' : ''}`}
-                onPress={() => setTrainerTab('rubric')}
-              >
-                <Text className={`font-bold text-xs ${trainerTab === 'rubric' ? 'text-white' : 'text-slate-600'}`}>
-                  Pedoman Skala (SB/B/C/K)
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <MaterialIcons name="search" size={21} color={COLORS.textMuted} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Cari judul SOP..."
+                  placeholderTextColor={COLORS.textMuted}
+                  returnKeyType="search"
+                  style={{ flex: 1, fontSize: 15, color: COLORS.textMain, padding: 0 }}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    accessibilityLabel="Hapus pencarian"
+                    hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+                  >
+                    <MaterialIcons name="cancel" size={19} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
 
-            {trainerTab === 'modules' ? (
-              <View>
-                {/* Search Bar */}
-                <View className="bg-white rounded-xl px-3.5 py-2.5 border border-slate-200 mb-3 flex-row items-center space-x-2">
-                  <MaterialIcons name="search" size={20} color="#94A3B8" />
-                  <TextInput
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder="Cari judul SOP dari Web Admin..."
-                    placeholderTextColor="#94A3B8"
-                    className="flex-1 text-xs text-slate-700 p-0"
-                  />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchQuery('')}>
-                      <MaterialIcons name="close" size={16} color="#94A3B8" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Category Filters */}
-                <View className="flex-row gap-2 mb-3">
-                  {[
-                    { id: 'ALL', label: 'Semua Kategori' },
-                    { id: 'HEAD_OFFICE', label: 'Head Office' },
-                    { id: 'OPERASIONAL', label: 'Operasional Gerai' },
-                  ].map((cat) => (
+              {/* Category chips */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+                {[
+                  { id: 'ALL', label: 'Semua Kategori' },
+                  { id: 'HEAD_OFFICE', label: 'Head Office' },
+                  { id: 'OPERASIONAL', label: 'Operasional Gerai' },
+                ].map((cat) => {
+                  const active = selectedCategory === cat.id;
+                  return (
                     <TouchableOpacity
                       key={cat.id}
                       onPress={() => setSelectedCategory(cat.id)}
-                      className={`px-3 py-1.5 rounded-lg border ${selectedCategory === cat.id ? 'bg-[#419CC3] border-[#419CC3]' : 'bg-white border-slate-200'}`}
-                      activeOpacity={0.7}
+                      activeOpacity={0.8}
+                      accessibilityState={{ selected: active }}
+                      style={{
+                        minHeight: 40,
+                        justifyContent: 'center',
+                        paddingHorizontal: 16,
+                        borderRadius: RADIUS.pill,
+                        backgroundColor: active ? COLORS.brandDeep : COLORS.surface,
+                        ...SHADOW.card,
+                      }}
                     >
-                      <Text className={`text-[11px] font-bold ${selectedCategory === cat.id ? 'text-white' : 'text-slate-600'}`}>
+                      <Text style={{ ...TYPE.label, color: active ? COLORS.onBrand : COLORS.textSecondary }}>
                         {cat.label}
                       </Text>
                     </TouchableOpacity>
-                  ))}
+                  );
+                })}
+              </ScrollView>
+
+              {loadingSops ? (
+                <View style={{ paddingVertical: 48, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, marginTop: 10 }}>
+                    Memuat dokumen SOP...
+                  </Text>
                 </View>
-
-                {/* SOP List State */}
-                {loadingSops ? (
-                  <View className="py-12 items-center justify-center">
-                    <ActivityIndicator size="small" color="#419CC3" />
-                    <Text className="text-xs text-slate-400 mt-2 font-medium">Memuat dokumen SOP dari database...</Text>
+              ) : filteredSops.length === 0 ? (
+                <Card style={{ paddingVertical: 40, alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 28,
+                      backgroundColor: COLORS.surfaceSunken,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialIcons name="folder-open" size={28} color={COLORS.textMuted} />
                   </View>
-                ) : filteredSops.length === 0 ? (
-                  <View className="bg-white rounded-2xl p-8 border border-slate-200 items-center justify-center my-4">
-                    <MaterialIcons name="folder-open" size={40} color="#CBD5E1" />
-                    <Text className="text-slate-700 font-bold text-sm mt-3">Belum Ada Dokumen SOP</Text>
-                    <Text className="text-slate-400 text-xs text-center mt-1">
-                      Dokumen SOP yang diunggah di Web Admin akan otomatis muncul di sini.
-                    </Text>
-                  </View>
-                ) : (
-                  filteredSops.map((sop) => {
-                    const pointCount = sop.Points?.length ?? sop._count?.Points ?? 0;
-                    const isHO = sop.category === 'HEAD_OFFICE';
+                  <Text style={{ ...TYPE.h3, color: COLORS.textMain, marginTop: 14 }}>Belum ada dokumen SOP</Text>
+                  <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>
+                    Dokumen yang diunggah di Web Admin akan muncul di sini.
+                  </Text>
+                </Card>
+              ) : (
+                filteredSops.map((sop, idx) => {
+                  const pointCount = sop.Points?.length ?? sop._count?.Points ?? 0;
+                  const isHO = sop.category === 'HEAD_OFFICE';
 
-                    return (
-                      <TouchableOpacity
-                        key={sop.id}
-                        onPress={() => setActiveSopModal(sop)}
-                        activeOpacity={0.7}
-                        className="bg-white rounded-xl p-4 border border-slate-200 mb-3 shadow-2xs"
-                      >
-                        <View className="flex-row justify-between items-start mb-2">
-                          <View className="flex-1 pr-2">
-                            <Text className="font-bold text-slate-800 text-sm leading-snug">{sop.title}</Text>
-                            <Text className="text-xs text-slate-400 mt-1 font-mono">ID: {sop.id.slice(0, 8)}</Text>
+                  return (
+                    <TouchableOpacity key={sop.id} onPress={() => setActiveSopModal(sop)} activeOpacity={0.8}>
+                      <Card padded={false} style={{ overflow: 'hidden' }}>
+                        <View style={{ paddingHorizontal: 16, paddingVertical: 15 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 13 }}>
+                            <View
+                              style={{
+                                width: 42,
+                                height: 42,
+                                borderRadius: RADIUS.md,
+                                backgroundColor: COLORS.surfaceSunken,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.textSecondary }}>
+                                {String(idx + 1).padStart(2, '0')}
+                              </Text>
+                            </View>
+
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain, lineHeight: 20 }}>
+                                {sop.title}
+                              </Text>
+                              <Text style={{ ...TYPE.micro, color: COLORS.textMuted, marginTop: 5 }}>
+                                {isHO ? 'HEAD OFFICE' : 'OPERASIONAL'}
+                              </Text>
+                            </View>
                           </View>
-                          <View className={`px-2 py-1 rounded-md border ${isHO ? 'bg-indigo-50 border-indigo-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                            <Text className={`text-[10px] font-bold ${isHO ? 'text-indigo-700' : 'text-emerald-700'}`}>
-                              {sop.category}
-                            </Text>
+
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginTop: 13,
+                              paddingTop: 12,
+                              borderTopWidth: 1,
+                              borderTopColor: COLORS.divider,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <MaterialIcons name="format-list-numbered" size={15} color={COLORS.textSecondary} />
+                              <Text style={{ ...TYPE.label, color: COLORS.textSecondary }}>
+                                {pointCount} butir standar
+                              </Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                              <Text style={{ ...TYPE.label, color: COLORS.primary }}>Lihat Detail</Text>
+                              <MaterialIcons name="chevron-right" size={18} color={COLORS.primary} />
+                            </View>
                           </View>
                         </View>
-
-                        <View className="flex-row items-center justify-between mt-2 pt-2.5 border-t border-slate-100">
-                          <View className="flex-row items-center space-x-1">
-                            <MaterialIcons name="format-list-numbered" size={14} color="#64748B" />
-                            <Text className="text-[11px] text-slate-600 font-semibold">
-                              {pointCount} Butir Standar Kerja
-                            </Text>
-                          </View>
-
-                          <View className="flex-row items-center space-x-0.5 bg-[#419CC3]/10 px-2 py-1 rounded-md">
-                            <Text className="text-[11px] font-bold text-[#419CC3]">Lihat Detail SOP</Text>
-                            <MaterialIcons name="chevron-right" size={14} color="#419CC3" />
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
-              </View>
-            ) : (
-              <View>
-                {/* Rubric View */}
-                <View className="bg-white rounded-xl p-4 border border-slate-200 mb-3">
-                  <View className="flex-row items-center space-x-2 mb-2">
-                    <View className="w-8 h-8 rounded-lg bg-emerald-500 items-center justify-center">
-                      <Text className="text-white font-black text-xs">SB</Text>
-                    </View>
-                    <View className="ml-2">
-                      <Text className="font-bold text-slate-800 text-sm">Sangat Baik (Skor 5)</Text>
-                      <Text className="text-[11px] text-emerald-700 font-semibold">Memenuhi 100% SOP + Proaktif</Text>
-                    </View>
-                  </View>
-                  <Text className="text-xs text-slate-600 leading-relaxed">
-                    Staf melakukan langkah kerja dengan sempurna, konsisten, cepat, dan menunjukkan inisiatif pelayanan terbaik tanpa perlu supervisi.
-                  </Text>
-                </View>
-
-                <View className="bg-white rounded-xl p-4 border border-slate-200 mb-3">
-                  <View className="flex-row items-center space-x-2 mb-2">
-                    <View className="w-8 h-8 rounded-lg bg-blue-500 items-center justify-center">
-                      <Text className="text-white font-black text-xs">B</Text>
-                    </View>
-                    <View className="ml-2">
-                      <Text className="font-bold text-slate-800 text-sm">Baik (Skor 4)</Text>
-                      <Text className="text-[11px] text-blue-700 font-semibold">Sesuai Standar SOP Minimum</Text>
-                    </View>
-                  </View>
-                  <Text className="text-xs text-slate-600 leading-relaxed">
-                    Staf menjalankan instruksi kerja dengan tepat dan benar, namun sesekali membutuhkan panduan minor pada situasi sibuk.
-                  </Text>
-                </View>
-
-                <View className="bg-white rounded-xl p-4 border border-slate-200 mb-3">
-                  <View className="flex-row items-center space-x-2 mb-2">
-                    <View className="w-8 h-8 rounded-lg bg-amber-500 items-center justify-center">
-                      <Text className="text-white font-black text-xs">C</Text>
-                    </View>
-                    <View className="ml-2">
-                      <Text className="font-bold text-slate-800 text-sm">Cukup (Skor 3)</Text>
-                      <Text className="text-[11px] text-amber-700 font-semibold">Butuh Pengawasan Berkala</Text>
-                    </View>
-                  </View>
-                  <Text className="text-xs text-slate-600 leading-relaxed">
-                    Terdapat beberapa kelalaian kecil dalam urutan kerja atau kebersihan workstation, perlu supervisi berkala dari Store Manager.
-                  </Text>
-                </View>
-
-                <View className="bg-white rounded-xl p-4 border border-slate-200 mb-3">
-                  <View className="flex-row items-center space-x-2 mb-2">
-                    <View className="w-8 h-8 rounded-lg bg-rose-500 items-center justify-center">
-                      <Text className="text-white font-black text-xs">K</Text>
-                    </View>
-                    <View className="ml-2">
-                      <Text className="font-bold text-slate-800 text-sm">Kurang (Skor 1 - 2)</Text>
-                      <Text className="text-[11px] text-rose-700 font-semibold">Wajib Re-Training</Text>
-                    </View>
-                  </View>
-                  <Text className="text-xs text-slate-600 leading-relaxed">
-                    Tidak memenuhi standar higienitas/SOP, berpotensi menurunkan kualitas rasa atau kepuasan pelanggan. Wajib dijadwalkan training ulang.
-                  </Text>
-                </View>
-              </View>
-            )}
-          </>
-        ) : (
-          /* ================= AUDITOR VIEW ================= */
-          <>
-            {/* Auditor Tabs */}
-            <View className="flex-row bg-white rounded-xl p-1 border border-slate-200 mb-4">
-              <TouchableOpacity 
-                className={`flex-1 py-2.5 rounded-lg items-center ${auditTab === 'open' ? 'bg-[#419CC3]' : ''}`}
-                onPress={() => setAuditTab('open')}
-              >
-                <Text className={`font-bold text-xs ${auditTab === 'open' ? 'text-white' : 'text-slate-600'}`}>
-                  Temuan Terbuka (5)
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className={`flex-1 py-2.5 rounded-lg items-center ${auditTab === 'recurring' ? 'bg-[#419CC3]' : ''}`}
-                onPress={() => setAuditTab('recurring')}
-              >
-                <Text className={`font-bold text-xs ${auditTab === 'recurring' ? 'text-white' : 'text-slate-600'}`}>
-                  Berulang (3)
-                </Text>
-              </TouchableOpacity>
+                      </Card>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
             </View>
-
-            {auditTab === 'open' ? (
-              <View>
-                {[
-                  { title: 'Alat pemadam kebakaran (APAR) kedaluwarsa', outlet: 'Outlet Sudirman', category: 'K3 & Keselamatan', date: '7 Juli 2026', isRecurring: false },
-                  { title: 'SOP tidak dipasang di area kasir & kitchen', outlet: 'Outlet Tangerang', category: 'Operasional', date: '6 Juli 2026', isRecurring: true },
-                  { title: 'Suhu chiller penyimpanan di luar batas toleransi', outlet: 'Outlet Kemang', category: 'Quality Assurance', date: '5 Juli 2026', isRecurring: false },
-                  { title: 'Dokumen izin sanitasi belum diperbarui', outlet: 'Outlet BSD City', category: 'Legalitas', date: '4 Juli 2026', isRecurring: false },
-                  { title: 'Pekerja tidak menggunakan celemek & hairnet', outlet: 'Outlet Kelapa Gading', category: 'Higienitas', date: '3 Juli 2026', isRecurring: true },
-                ].map((f, i) => (
-                  <View key={i} className="bg-white rounded-xl p-4 border border-slate-200 mb-3 shadow-2xs">
-                    <View className="flex-row items-start justify-between mb-2">
-                      <View className="flex-1 pr-2">
-                        <Text className="font-bold text-slate-800 text-sm">{f.title}</Text>
-                        <Text className="text-xs text-slate-500 mt-1">📍 {f.outlet}</Text>
+          ) : (
+            /* ================= RUBRIC ================= */
+            <View style={{ gap: 12 }}>
+              {RUBRIC.map((r) => (
+                <Card key={r.grade}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13 }}>
+                    <GradeBadge grade={r.grade} />
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                        <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain }}>{r.title}</Text>
+                        <Text style={{ ...TYPE.micro, color: COLORS.textMuted }}>{r.score.toUpperCase()}</Text>
                       </View>
+                      <Text style={{ ...TYPE.label, color: COLORS.textSecondary, marginTop: 3 }}>{r.headline}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, lineHeight: 20, marginTop: 12 }}>
+                    {r.body}
+                  </Text>
+                </Card>
+              ))}
+            </View>
+          )
+        ) : /* ================= AUDITOR VIEW ================= */ auditTab === 'open' ? (
+          <View style={{ gap: 12 }}>
+            {OPEN_FINDINGS.map((f, i) => {
+              return (
+                <Card key={i} padded={false} style={{ overflow: 'hidden' }}>
+                  <View style={{ paddingHorizontal: 16, paddingVertical: 15 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                      <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain, flex: 1, lineHeight: 20 }}>
+                        {f.title}
+                      </Text>
                       {f.isRecurring && (
-                        <View className="bg-rose-50 px-2 py-1 rounded-md border border-rose-200">
-                          <Text className="text-[10px] font-bold text-rose-600">Berulang</Text>
+                        <View
+                          style={{
+                            backgroundColor: COLORS.dangerLight,
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                            borderRadius: RADIUS.pill,
+                          }}
+                        >
+                          <Text style={{ ...TYPE.micro, color: COLORS.danger }}>BERULANG</Text>
                         </View>
                       )}
                     </View>
-                    <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                      <View className="bg-slate-100 px-2 py-0.5 rounded">
-                        <Text className="text-[10px] font-bold text-slate-600">{f.category}</Text>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 }}>
+                      <MaterialIcons name="storefront" size={14} color={COLORS.textSecondary} />
+                      <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary }}>{f.outlet}</Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginTop: 13,
+                        paddingTop: 12,
+                        borderTopWidth: 1,
+                        borderTopColor: COLORS.divider,
+                      }}
+                    >
+                      <View
+                        style={{
+                          backgroundColor: COLORS.surfaceSunken,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: RADIUS.pill,
+                        }}
+                      >
+                        <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>{f.category.toUpperCase()}</Text>
                       </View>
-                      <Text className="text-[11px] text-slate-400">{f.date}</Text>
+                      <Text style={{ fontSize: 12, color: COLORS.textMuted }}>{f.date}</Text>
                     </View>
                   </View>
-                ))}
+                </Card>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 12,
+                backgroundColor: COLORS.warningLight,
+                borderRadius: RADIUS.lg,
+                padding: 16,
+              }}
+            >
+              <MaterialIcons name="warning-amber" size={22} color={COLORS.warningDeep} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...TYPE.h3, fontSize: 14, color: COLORS.warningDeep }}>Perhatian Khusus</Text>
+                <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.warningDeep, marginTop: 4, lineHeight: 19 }}>
+                  Temuan berulang menandakan ketidakpatuhan sistemik yang perlu di-escalate ke Store Manager.
+                </Text>
               </View>
-            ) : (
-              <View>
-                <View className="bg-amber-50 rounded-xl p-3.5 border border-amber-200 mb-3">
-                  <Text className="font-bold text-amber-800 text-xs mb-0.5">⚠️ Perhatian Khusus</Text>
-                  <Text className="text-[11px] text-amber-700 leading-snug">
-                    Temuan berulang menandakan adanya ketidakpatuhan sistemik yang perlu di-escalate ke Store Manager.
+            </View>
+
+            <Card padded={false} style={{ overflow: 'hidden' }}>
+              <View style={{ paddingHorizontal: 16, paddingVertical: 15 }}>
+                <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain, lineHeight: 20 }}>
+                  SOP tidak dipasang di area kasir & kitchen
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 }}>
+                  <MaterialIcons name="storefront" size={14} color={COLORS.textSecondary} />
+                  <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary }}>
+                    Ditemukan di 3 outlet berbeda
                   </Text>
                 </View>
-
-                <View className="bg-white rounded-xl p-4 border border-slate-200 mb-3">
-                  <Text className="font-bold text-slate-800 text-sm">SOP tidak dipasang di area kasir & kitchen</Text>
-                  <Text className="text-xs text-slate-500 mt-1">📍 Ditemukan di 3 Outlet Berbeda</Text>
-                  <View className="mt-2 pt-2 border-t border-slate-100 flex-row justify-between items-center">
-                    <Text className="text-[11px] font-bold text-rose-600">Ditemukan 5x dalam 30 hari</Text>
-                    <View className="bg-slate-100 px-2 py-0.5 rounded">
-                      <Text className="text-[10px] text-slate-600 font-bold">Operasional</Text>
-                    </View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: 13,
+                    paddingTop: 12,
+                    borderTopWidth: 1,
+                    borderTopColor: COLORS.divider,
+                  }}
+                >
+                  <Text style={{ ...TYPE.label, color: COLORS.danger }}>5x dalam 30 hari</Text>
+                  <View
+                    style={{
+                      backgroundColor: COLORS.surfaceSunken,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: RADIUS.pill,
+                    }}
+                  >
+                    <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>OPERASIONAL</Text>
                   </View>
                 </View>
               </View>
-            )}
-          </>
+            </Card>
+          </View>
         )}
       </ScrollView>
 
@@ -358,79 +488,95 @@ export default function FindingsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setActiveSopModal(null)}
       >
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-          {/* Modal Header */}
-          <View style={{ paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ flex: 1, paddingRight: 12 }}>
-              <View className="flex-row items-center space-x-2 mb-1">
-                <View className="bg-[#419CC3]/10 px-2 py-0.5 rounded">
-                  <Text className="text-[10px] font-bold text-[#419CC3]">
-                    {activeSopModal?.category || 'SOP'}
-                  </Text>
-                </View>
-                <Text className="text-[11px] text-slate-400">
-                  {activeSopModal?.Points?.length || 0} Poin Standar
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+          <View style={{ backgroundColor: COLORS.brandDeep, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 22 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...TYPE.micro, color: COLORS.onBrandMuted }}>
+                  {(activeSopModal?.category || 'SOP').toUpperCase()} • {activeSopModal?.Points?.length || 0} POIN
+                </Text>
+                <Text style={{ ...TYPE.h1, fontSize: 19, color: COLORS.onBrand, marginTop: 6 }} numberOfLines={3}>
+                  {activeSopModal?.title}
                 </Text>
               </View>
-              <Text className="text-base font-bold text-slate-800" numberOfLines={2}>
-                {activeSopModal?.title}
-              </Text>
-            </View>
 
-            <TouchableOpacity
-              onPress={() => setActiveSopModal(null)}
-              className="w-8 h-8 rounded-full bg-slate-100 items-center justify-center"
-            >
-              <MaterialIcons name="close" size={20} color="#64748B" />
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setActiveSopModal(null)}
+                accessibilityLabel="Tutup dokumen SOP"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  backgroundColor: 'rgba(255,255,255,0.16)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="close" size={21} color={COLORS.onBrand} />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Modal Body - SOP Points List */}
-          <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 12 }}>
             {activeSopModal?.Points && activeSopModal.Points.length > 0 ? (
               activeSopModal.Points.map((pt, idx) => (
-                <View
-                  key={pt.id || idx}
-                  className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-3"
-                >
-                  <View className="flex-row items-start space-x-3 mb-1.5">
-                    <View className="w-6 h-6 rounded-full bg-[#419CC3] items-center justify-center">
-                      <Text className="text-white text-xs font-bold">{pt.order_num || idx + 1}</Text>
+                <Card key={pt.id || idx}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 13 }}>
+                    <View
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 15,
+                        backgroundColor: COLORS.primaryLight,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.brandDark }}>
+                        {pt.order_num || idx + 1}
+                      </Text>
                     </View>
-                    <Text className="text-sm font-bold text-slate-800 flex-1 ml-2 leading-snug">
-                      {pt.title}
-                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ ...TYPE.h3, fontSize: 14.5, color: COLORS.textMain, lineHeight: 20 }}>
+                        {pt.title}
+                      </Text>
+                      {pt.description ? (
+                        <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, lineHeight: 20, marginTop: 6 }}>
+                          {pt.description}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
-                  {pt.description ? (
-                    <Text className="text-xs text-slate-600 mt-2 ml-8 leading-relaxed">
-                      {pt.description}
-                    </Text>
-                  ) : null}
-                </View>
+                </Card>
               ))
             ) : (
-              <View className="py-12 items-center justify-center">
-                <MaterialIcons name="info-outline" size={32} color="#94A3B8" />
-                <Text className="text-xs text-slate-500 font-medium mt-2">
-                  Belum ada rincian poin teks pada SOP ini.
+              <View style={{ paddingVertical: 48, alignItems: 'center' }}>
+                <MaterialIcons name="info-outline" size={32} color={COLORS.textMuted} />
+                <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, marginTop: 10 }}>
+                  Belum ada rincian poin pada SOP ini.
                 </Text>
               </View>
             )}
           </ScrollView>
 
-          {/* Modal Footer */}
-          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9', backgroundColor: '#FAFAFA' }}>
+          <View style={{ padding: 16, paddingBottom: 24, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.divider }}>
             <TouchableOpacity
               onPress={() => setActiveSopModal(null)}
-              className="w-full py-3 bg-[#419CC3] rounded-xl items-center justify-center"
-              activeOpacity={0.8}
+              activeOpacity={0.85}
+              style={{
+                minHeight: 52,
+                borderRadius: RADIUS.md,
+                backgroundColor: COLORS.brandDeep,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Text className="text-white font-bold text-xs">Tutup Dokumen SOP</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.onBrand }}>Tutup Dokumen</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
-

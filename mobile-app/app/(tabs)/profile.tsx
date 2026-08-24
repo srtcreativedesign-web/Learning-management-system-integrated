@@ -1,402 +1,242 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, Platform, StatusBar, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
-
-const PALETTE = {
-  headerBg: '#2C7B9E', // System Dark Primary (#419CC3 family)
-  headerAccent: '#419CC3', // System Primary
-  background: '#F8FAFC', // Neutral Background
-  surface: '#FFFFFF',
-  textMain: '#0B1C30',
-  textSecondary: '#64748B',
-  border: '#E2E8F0',
-  primary: '#419CC3', // Brand System Color
-  primaryLight: '#EFF8FC', // Soft Primary Tint
-  primaryBorder: '#BEE3F2', // Light Border for Badge
-  danger: '#EF4444',
-  dangerLight: '#FEF2F2',
-};
+import { BrandHeader, BrandStatusScrim } from '../../src/components/ui/BrandHeader';
+import { Card } from '../../src/components/ui/Card';
+import { Avatar } from '../../src/components/ui/Avatar';
+import { COLORS, RADIUS, SHADOW, TOUCH_MIN, TYPE } from '../../src/theme';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Konfirmasi Keluar',
-      'Apakah Anda yakin ingin keluar dari akun ini?',
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Keluar',
-          style: 'destructive',
-          onPress: () => {
-            logout();
-            router.replace('/');
-          },
-        },
-      ]
-    );
-  };
-
   const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');
   const displayName = user?.name || (isTrainer ? 'Budi Santoso' : 'Dian Pratama');
   const displayRole = isTrainer ? 'Trainer & Asesor TnD' : 'Auditor Lapangan';
-  const headerTitle = isTrainer ? 'Profil Trainer' : 'Profil Auditor';
   const displayEmail = user?.email || (isTrainer ? 'budi.trainer@sobathr.com' : 'dian.auditor@sobathr.com');
 
+  const handleLogout = () => {
+    Alert.alert('Konfirmasi Keluar', 'Apakah Anda yakin ingin keluar dari akun ini?', [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Keluar',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/');
+        },
+      },
+    ]);
+  };
+
+  const menuItems: {
+    icon: keyof typeof MaterialIcons.glyphMap;
+    label: string;
+    onPress: () => void;
+  }[] = [
+    {
+      icon: 'person-outline',
+      label: 'Informasi Pribadi',
+      onPress: () => Alert.alert('Informasi Pribadi', `Nama: ${displayName}\nEmail: ${displayEmail}\nRole: ${displayRole}`),
+    },
+    {
+      icon: 'workspace-premium',
+      label: isTrainer ? 'Sertifikasi Trainer & Asesor' : 'Spesialisasi Audit',
+      onPress: () =>
+        Alert.alert(
+          'Sertifikasi',
+          'Status: Terverifikasi Aktif\nKeahlian: Asesmen Standar Operasional Gerai & Evaluasi Barista.'
+        ),
+    },
+    {
+      icon: 'notifications-none',
+      label: 'Notifikasi',
+      onPress: () => Alert.alert('Pengaturan Notifikasi', 'Notifikasi jadwal kunjungan dan update SOP aktif.'),
+    },
+    {
+      icon: 'help-outline',
+      label: 'Bantuan & Dukungan',
+      onPress: () => Alert.alert('Bantuan', 'Hubungi tim TnD Head Office untuk kendala aplikasi.'),
+    },
+  ];
+
   return (
-    <View style={{ flex: 1, backgroundColor: PALETTE.background }}>
-      <StatusBar barStyle="light-content" backgroundColor={PALETTE.headerBg} />
-      
-      <ScrollView 
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <BrandStatusScrim />
+
+
+      <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: 130 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ================= TOP BLUE HEADER BANNER ================= */}
-        <View 
-          style={{ 
-            backgroundColor: PALETTE.headerBg, 
-            paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 12 : 52,
-            paddingBottom: 72,
-            paddingHorizontal: 20,
-            borderBottomLeftRadius: 28,
-            borderBottomRightRadius: 28,
-          }}
-        >
-          {/* Top Bar: Back, Title, Notification, Settings */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity 
-                onPress={() => router.back()} 
-                activeOpacity={0.7}
-                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.3 }}>
-                {headerTitle}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <TouchableOpacity 
-                activeOpacity={0.7}
-                onPress={() => Alert.alert('Notifikasi', 'Tidak ada notifikasi baru.')}
-                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <MaterialIcons name="notifications-none" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                activeOpacity={0.7}
-                onPress={() => Alert.alert('Pengaturan', 'Fitur konfigurasi sistem.')}
-                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <MaterialIcons name="settings" size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* ================= FLOATING HERO PROFILE CARD ================= */}
-        <View style={{ paddingHorizontal: 20, marginTop: -46 }}>
-          <View 
-            style={{ 
-              backgroundColor: PALETTE.surface, 
-              borderRadius: 24, 
-              paddingTop: 54,
-              paddingBottom: 22,
-              paddingHorizontal: 20,
+      <BrandHeader
+        title="Profil"
+        overlap
+        right={
+          <TouchableOpacity
+            onPress={() => Alert.alert('Pengaturan', 'Fitur konfigurasi sistem.')}
+            accessibilityLabel="Pengaturan"
+            activeOpacity={0.7}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(255,255,255,0.14)',
               alignItems: 'center',
-              position: 'relative',
-              shadowColor: '#0F172A',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.08,
-              shadowRadius: 16,
-              elevation: 6,
-              borderWidth: 1,
-              borderColor: 'rgba(226, 232, 240, 0.8)',
+              justifyContent: 'center',
             }}
           >
-            {/* Sticking Out Avatar */}
-            <View 
-              style={{ 
-                position: 'absolute', 
-                top: -46, 
-                alignSelf: 'center',
-                width: 92, 
-                height: 92, 
-                borderRadius: 46, 
-                backgroundColor: PALETTE.surface,
-                padding: 4,
-                shadowColor: '#0F172A',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.15,
-                shadowRadius: 10,
-                elevation: 8,
+            <MaterialIcons name="settings" size={21} color={COLORS.onBrand} />
+          </TouchableOpacity>
+        }
+      />
+
+        <View style={{ paddingHorizontal: 20 }}>
+        {/* Identity card overlaps the header curve. */}
+        <View style={{ marginTop: -26, ...SHADOW.raised }}>
+          <Card style={{ padding: 18 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <Avatar name={displayName} size={62} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...TYPE.h2, color: COLORS.textMain }} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <View
+                  style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: COLORS.primaryLight,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: RADIUS.pill,
+                    marginTop: 6,
+                  }}
+                >
+                  <Text style={{ ...TYPE.micro, color: COLORS.brandDark }}>{displayRole.toUpperCase()}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 16,
+                paddingTop: 14,
+                borderTopWidth: 1,
+                borderTopColor: COLORS.divider,
               }}
             >
-              <Image 
-                source={{ uri: isTrainer ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80' }} 
-                style={{ width: '100%', height: '100%', borderRadius: 42 }} 
-              />
-              
-              {/* Verified Blue Badge */}
-              <View 
-                style={{ 
-                  position: 'absolute', 
-                  bottom: 2, 
-                  right: 2, 
-                  backgroundColor: PALETTE.primary, 
-                  padding: 4, 
-                  borderRadius: 14, 
-                  borderWidth: 2.5, 
-                  borderColor: '#FFFFFF',
+              <MaterialIcons name="mail-outline" size={16} color={COLORS.textMuted} />
+              <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, flex: 1 }} numberOfLines={1}>
+                {displayEmail}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <MaterialIcons name="verified" size={15} color={COLORS.success} />
+                <Text style={{ ...TYPE.micro, color: COLORS.success }}>AKTIF</Text>
+              </View>
+            </View>
+          </Card>
+        </View>
+
+        {/* Stats */}
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+          {[
+            {
+              icon: (isTrainer ? 'groups' : 'assignment-turned-in') as keyof typeof MaterialIcons.glyphMap,
+              value: isTrainer ? '18' : '24',
+              label: isTrainer ? 'Sesi In-House' : 'Audit Selesai',
+              tint: COLORS.primary,
+            },
+            {
+              icon: (isTrainer ? 'insights' : 'storefront') as keyof typeof MaterialIcons.glyphMap,
+              value: isTrainer ? '42' : '45',
+              label: isTrainer ? 'Staf Dievaluasi' : 'Total Outlet',
+              tint: COLORS.success,
+            },
+          ].map((stat) => (
+            <Card key={stat.label} style={{ flex: 1, padding: 16 }}>
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: RADIUS.md,
+                  backgroundColor: `${stat.tint}1A`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <MaterialIcons name={stat.icon} size={20} color={stat.tint} />
+              </View>
+              <Text style={{ ...TYPE.display, fontSize: 26, color: COLORS.textMain }}>{stat.value}</Text>
+              <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>{stat.label}</Text>
+            </Card>
+          ))}
+        </View>
+
+        {/* Menu */}
+        <Text style={{ ...TYPE.h3, color: COLORS.textMain, marginTop: 28, marginBottom: 12 }}>Pengaturan Akun</Text>
+
+        <Card padded={false} style={{ overflow: 'hidden' }}>
+          {menuItems.map((item, idx) => (
+            <TouchableOpacity
+              key={item.label}
+              onPress={item.onPress}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                minHeight: TOUCH_MIN + 8,
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderBottomWidth: idx < menuItems.length - 1 ? 1 : 0,
+                borderBottomColor: COLORS.divider,
+              }}
+            >
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: RADIUS.sm,
+                  backgroundColor: COLORS.surfaceSunken,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <MaterialIcons name="check" size={12} color="#FFFFFF" />
+                <MaterialIcons name={item.icon} size={20} color={COLORS.brandDark} />
               </View>
-            </View>
-
-            {/* Profile Info */}
-            <Text style={{ fontSize: 20, fontWeight: '700', color: PALETTE.textMain, letterSpacing: -0.4, marginTop: 4 }}>
-              {displayName}
-            </Text>
-
-            {/* Role Badge */}
-            <View 
-              style={{ 
-                backgroundColor: PALETTE.primaryLight, 
-                paddingHorizontal: 12, 
-                paddingVertical: 4, 
-                borderRadius: 20, 
-                marginTop: 6, 
-                borderWidth: 1, 
-                borderColor: PALETTE.primaryBorder,
-              }}
-            >
-              <Text style={{ fontSize: 11, fontWeight: '700', color: PALETTE.primary }}>
-                {displayRole}
-              </Text>
-            </View>
-
-            {/* Email */}
-            <Text style={{ fontSize: 12, fontWeight: '500', color: PALETTE.textSecondary, marginTop: 6 }}>
-              {displayEmail}
-            </Text>
-          </View>
-        </View>
-
-        {/* ================= 2 STAT CARDS ROW ================= */}
-        <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 12, marginTop: 16 }}>
-          {/* Stat 1 */}
-          <View 
-            style={{ 
-              flex: 1, 
-              backgroundColor: PALETTE.surface, 
-              paddingVertical: 14,
-              paddingHorizontal: 14,
-              borderRadius: 16, 
-              flexDirection: 'row',
-              alignItems: 'center', 
-              gap: 12,
-              shadowColor: '#0F172A',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.04,
-              shadowRadius: 8,
-              elevation: 2,
-              borderWidth: 1,
-              borderColor: PALETTE.border,
-            }}
-          >
-            <View 
-              style={{ 
-                width: 42, 
-                height: 42, 
-                borderRadius: 21, 
-                backgroundColor: PALETTE.primary, 
-                alignItems: 'center', 
-                justifyContent: 'center',
-              }}
-            >
-              <MaterialIcons name={isTrainer ? "groups" : "assignment-turned-in"} size={22} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={{ fontSize: 20, fontWeight: '700', color: PALETTE.textMain, lineHeight: 24 }}>
-                {isTrainer ? '18' : '24'}
-              </Text>
-              <Text style={{ fontSize: 11, fontWeight: '500', color: PALETTE.textSecondary }}>
-                {isTrainer ? 'Sesi In-House' : 'Audit Selesai'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Stat 2 */}
-          <View 
-            style={{ 
-              flex: 1, 
-              backgroundColor: PALETTE.surface, 
-              paddingVertical: 14,
-              paddingHorizontal: 14,
-              borderRadius: 16, 
-              flexDirection: 'row',
-              alignItems: 'center', 
-              gap: 12,
-              shadowColor: '#0F172A',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.04,
-              shadowRadius: 8,
-              elevation: 2,
-              borderWidth: 1,
-              borderColor: PALETTE.border,
-            }}
-          >
-            <View 
-              style={{ 
-                width: 42, 
-                height: 42, 
-                borderRadius: 21, 
-                backgroundColor: PALETTE.primary, 
-                alignItems: 'center', 
-                justifyContent: 'center',
-              }}
-            >
-              <MaterialIcons name={isTrainer ? "bar-chart" : "storefront"} size={22} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={{ fontSize: 20, fontWeight: '700', color: PALETTE.textMain, lineHeight: 24 }}>
-                {isTrainer ? '42' : '45'}
-              </Text>
-              <Text style={{ fontSize: 11, fontWeight: '500', color: PALETTE.textSecondary }}>
-                {isTrainer ? 'Staf Dievaluasi' : 'Total Outlet'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ================= PENGATURAN AKUN SECTION ================= */}
-        <View style={{ paddingHorizontal: 20, marginTop: 24 }}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: PALETTE.textMain, marginBottom: 12, letterSpacing: -0.2 }}>
-            Pengaturan Akun
-          </Text>
-
-          <View 
-            style={{ 
-              backgroundColor: PALETTE.surface, 
-              borderRadius: 16, 
-              overflow: 'hidden',
-              shadowColor: '#0F172A',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.04,
-              shadowRadius: 8,
-              elevation: 2,
-              borderWidth: 1,
-              borderColor: PALETTE.border,
-            }}
-          >
-            {/* Menu Item 1: Informasi Pribadi */}
-            <TouchableOpacity 
-              onPress={() => Alert.alert('Informasi Pribadi', `Nama: ${displayName}\nEmail: ${displayEmail}\nRole: ${displayRole}`)}
-              style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                paddingVertical: 14, 
-                paddingHorizontal: 16,
-                borderBottomWidth: 1, 
-                borderBottomColor: '#F1F5F9' 
-              }} 
-              activeOpacity={0.7}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: PALETTE.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialIcons name="person" size={20} color={PALETTE.primary} />
-                </View>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: PALETTE.textMain }}>
-                  Informasi Pribadi
-                </Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color="#94A3B8" />
+              <Text style={{ ...TYPE.body, fontSize: 14.5, color: COLORS.textMain, flex: 1 }}>{item.label}</Text>
+              <MaterialIcons name="chevron-right" size={20} color={COLORS.textMuted} />
             </TouchableOpacity>
+          ))}
+        </Card>
 
-            {/* Menu Item 2: Spesialisasi / Sertifikasi */}
-            <TouchableOpacity 
-              onPress={() => Alert.alert('Spesialisasi & Sertifikasi', `Status Sertifikasi: Terverifikasi Aktif\nKeahlian: Asesmen Standar Operasional Gerai & Evaluasi Barista.`)}
-              style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                paddingVertical: 14, 
-                paddingHorizontal: 16,
-                borderBottomWidth: 1, 
-                borderBottomColor: '#F1F5F9' 
-              }} 
-              activeOpacity={0.7}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: PALETTE.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialIcons name="assignment-turned-in" size={20} color={PALETTE.primary} />
-                </View>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: PALETTE.textMain }}>
-                  {isTrainer ? 'Sertifikasi Trainer & Asesor' : 'Spesialisasi Audit'}
-                </Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color="#94A3B8" />
-            </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleLogout}
+          activeOpacity={0.8}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            minHeight: 52,
+            borderRadius: RADIUS.md,
+            backgroundColor: COLORS.dangerLight,
+            marginTop: 20,
+          }}
+        >
+          <MaterialIcons name="logout" size={19} color={COLORS.danger} />
+          <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.danger }}>Keluar Akun</Text>
+        </TouchableOpacity>
 
-            {/* Menu Item 3: Notifikasi */}
-            <TouchableOpacity 
-              onPress={() => Alert.alert('Pengaturan Notifikasi', 'Notifikasi jadwal kunjungan dan update SOP aktif.')}
-              style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                paddingVertical: 14, 
-                paddingHorizontal: 16,
-              }} 
-              activeOpacity={0.7}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: PALETTE.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialIcons name="notifications" size={20} color={PALETTE.primary} />
-                </View>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: PALETTE.textMain }}>
-                  Notifikasi
-                </Text>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color="#94A3B8" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ================= LOGOUT BUTTON ================= */}
-        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-          <TouchableOpacity 
-            onPress={handleLogout}
-            style={{ 
-              backgroundColor: PALETTE.dangerLight, 
-              borderWidth: 1, 
-              borderColor: '#FECDD3',
-              borderRadius: 16, 
-              paddingVertical: 14, 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              gap: 8,
-            }}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons name="logout" size={18} color={PALETTE.danger} />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: PALETTE.danger }}>
-              Keluar Akun
-            </Text>
-          </TouchableOpacity>
+        <Text style={{ fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginTop: 18 }}>
+          SobatHR TnD System • v1.0.0
+        </Text>
         </View>
       </ScrollView>
     </View>

@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
-import { View, SafeAreaView, KeyboardAvoidingView, Platform, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, KeyboardAvoidingView, Platform, Text, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 
-// Context & Components
 import { useAuth } from '../src/context/AuthContext';
-import { LoginHeader } from '../src/components/auth/LoginHeader';
 import { InputField } from '../src/components/ui/InputField';
 import { Button } from '../src/components/ui/Button';
+import { COLORS, RADIUS, SHADOW, TYPE } from '../src/theme';
+
+const DEMO_ACCOUNTS: { email: string; role: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
+  { email: 'budi.trainer@sobathr.com', role: 'Trainer', icon: 'school' },
+  { email: 'dian.auditor@sobathr.com', role: 'Auditor', icon: 'assignment-turned-in' },
+  { email: 'admin@sobathr.com', role: 'Admin', icon: 'admin-panel-settings' },
+  { email: 'manager.hrbp@sobathr.com', role: 'HRBP', icon: 'business-center' },
+];
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,38 +48,83 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView 
-          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
-          contentContainerStyle={{ 
-            paddingHorizontal: 24, 
-            paddingTop: 32,
-            paddingBottom: 40,
-            justifyContent: 'center', 
-            flexGrow: 1 
-          }}
+    <View style={{ flex: 1, backgroundColor: COLORS.brandDeep }}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.brandDeep} />
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          {/* Header */}
-          <LoginHeader />
+          {/* ================= BRAND BAND ================= */}
+          <View style={{ paddingTop: insets.top + 32, paddingHorizontal: 28, paddingBottom: 40, overflow: 'hidden' }}>
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: -60,
+                right: -70,
+                width: 220,
+                height: 220,
+                borderRadius: 110,
+                backgroundColor: 'rgba(255,255,255,0.07)',
+              }}
+            />
 
-          {/* Error Banner */}
-          {errorMessage && (
-            <View className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex-row items-center space-x-2.5">
-              <MaterialIcons name="error-outline" size={20} color="#E11D48" />
-              <Text className="text-rose-700 text-xs font-semibold flex-1 leading-snug">
-                {errorMessage}
-              </Text>
+            <View
+              style={{
+                width: 54,
+                height: 54,
+                borderRadius: RADIUS.md,
+                backgroundColor: COLORS.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialIcons name="school" size={28} color="#FFFFFF" />
             </View>
-          )}
 
-          {/* Form */}
-          <View>
+            <Text style={{ ...TYPE.micro, color: COLORS.onBrandMuted, marginTop: 20 }}>TND LMS & AUDIT</Text>
+            <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.onBrand, letterSpacing: -1, marginTop: 6 }}>
+              Selamat Datang
+            </Text>
+            <Text style={{ ...TYPE.body, color: COLORS.onBrandMuted, marginTop: 8, lineHeight: 21 }}>
+              Masuk untuk mengakses training outlet, modul SOP, dan inspeksi audit lapangan.
+            </Text>
+          </View>
+
+          {/* ================= FORM SHEET ================= */}
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: COLORS.surface,
+              borderTopLeftRadius: 32,
+              borderTopRightRadius: 32,
+              paddingHorizontal: 24,
+              paddingTop: 28,
+              paddingBottom: insets.bottom + 28,
+            }}
+          >
+            {errorMessage && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  backgroundColor: COLORS.dangerLight,
+                  borderRadius: RADIUS.md,
+                  padding: 14,
+                  marginBottom: 20,
+                }}
+              >
+                <MaterialIcons name="error-outline" size={20} color={COLORS.danger} />
+                <Text style={{ ...TYPE.label, color: COLORS.danger, flex: 1, lineHeight: 18 }}>{errorMessage}</Text>
+              </View>
+            )}
+
             <InputField
               label="Alamat Email"
               value={email}
@@ -80,7 +132,7 @@ export default function LoginScreen() {
                 setEmail(text);
                 if (errorMessage) setErrorMessage(null);
               }}
-              placeholder="budi.trainer@sobathr.com"
+              placeholder="nama@sobathr.com"
               keyboardType="email-address"
               iconName="mail-outline"
             />
@@ -97,117 +149,87 @@ export default function LoginScreen() {
               iconName="lock-outline"
             />
 
-            {/* Remember Me & Forgot Password */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center' }}
+                style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, paddingRight: 8 }}
                 onPress={() => setRememberMe(!rememberMe)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: rememberMe }}
                 activeOpacity={0.7}
               >
-                <View className={`w-5 h-5 rounded-md border mr-2 items-center justify-center ${rememberMe ? 'bg-primary border-primary' : 'border-slate-300 bg-white'}`}>
-                  {rememberMe && (
-                    <MaterialIcons name="check" size={14} color="#FFFFFF" />
-                  )}
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 7,
+                    marginRight: 10,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: rememberMe ? COLORS.primary : COLORS.surface,
+                    borderWidth: rememberMe ? 0 : 1.5,
+                    borderColor: COLORS.border,
+                  }}
+                >
+                  {rememberMe && <MaterialIcons name="check" size={15} color="#FFFFFF" />}
                 </View>
-                <Text className="text-slate-600 text-sm font-medium">Ingat saya</Text>
+                <Text style={{ ...TYPE.body, color: COLORS.textSecondary }}>Ingat saya</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={{ color: '#419CC3', fontSize: 14, fontWeight: '600' }}>
-                  Lupa password?
-                </Text>
+              <TouchableOpacity activeOpacity={0.7} style={{ minHeight: 44, justifyContent: 'center' }}>
+                <Text style={{ ...TYPE.body, fontWeight: '600', color: COLORS.primary }}>Lupa password?</Text>
               </TouchableOpacity>
             </View>
 
-            <Button 
-              label="Masuk ke Akun" 
-              onPress={handleLogin} 
-              isLoading={isLoading} 
-              iconName="arrow-forward"
-            />
-          </View>
+            <Button label="Masuk ke Akun" onPress={handleLogin} isLoading={isLoading} iconName="arrow-forward" />
 
-          {/* Demo Quick Fill Cards */}
-          <View className="mt-5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
-            <View className="flex-row items-center justify-between mb-2.5">
-              <Text className="text-slate-600 text-xs font-bold uppercase tracking-wider flex-row items-center">
-                <MaterialIcons name="touch-app" size={14} color="#419CC3" /> Akun Uji Coba Cepat
-              </Text>
-              <Text className="text-[10px] text-slate-400 font-medium">Klik untuk isi otomatis</Text>
+            {/* Demo accounts — compact chips instead of four bordered cards. */}
+            <View style={{ marginTop: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: COLORS.divider }} />
+                <Text style={{ ...TYPE.micro, color: COLORS.textMuted }}>AKUN UJI COBA</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: COLORS.divider }} />
+              </View>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {DEMO_ACCOUNTS.map((acct) => {
+                  const active = email === acct.email;
+                  return (
+                    <TouchableOpacity
+                      key={acct.email}
+                      onPress={() => handleQuickDemo(acct.email)}
+                      activeOpacity={0.8}
+                      accessibilityLabel={`Isi otomatis akun ${acct.role}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 7,
+                        minHeight: 44,
+                        paddingHorizontal: 14,
+                        borderRadius: RADIUS.pill,
+                        backgroundColor: active ? COLORS.brandDeep : COLORS.surfaceSunken,
+                      }}
+                    >
+                      <MaterialIcons
+                        name={acct.icon}
+                        size={16}
+                        color={active ? COLORS.onBrand : COLORS.brandDark}
+                      />
+                      <Text style={{ ...TYPE.label, color: active ? COLORS.onBrand : COLORS.textSecondary }}>
+                        {acct.role}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
-            <View className="flex-row flex-wrap gap-2">
-              {/* Trainer */}
-              <TouchableOpacity
-                onPress={() => handleQuickDemo('budi.trainer@sobathr.com')}
-                className="flex-1 min-w-[45%] p-2.5 bg-white border border-blue-200 rounded-xl active:bg-blue-50 shadow-2xs"
-                activeOpacity={0.7}
-              >
-                <View className="flex-row items-center space-x-1 mb-1">
-                  <MaterialIcons name="school" size={14} color="#2563EB" />
-                  <Text className="text-xs font-bold text-blue-700">Trainer TnD</Text>
-                </View>
-                <Text className="text-[10px] text-slate-500 font-medium truncate">
-                  budi.trainer@sobathr.com
-                </Text>
-              </TouchableOpacity>
-
-              {/* Auditor */}
-              <TouchableOpacity
-                onPress={() => handleQuickDemo('dian.auditor@sobathr.com')}
-                className="flex-1 min-w-[45%] p-2.5 bg-white border border-emerald-200 rounded-xl active:bg-emerald-50 shadow-2xs"
-                activeOpacity={0.7}
-              >
-                <View className="flex-row items-center space-x-1 mb-1">
-                  <MaterialIcons name="assignment-turned-in" size={14} color="#059669" />
-                  <Text className="text-xs font-bold text-emerald-700">Auditor</Text>
-                </View>
-                <Text className="text-[10px] text-slate-500 font-medium truncate">
-                  dian.auditor@sobathr.com
-                </Text>
-              </TouchableOpacity>
-
-              {/* Super Admin */}
-              <TouchableOpacity
-                onPress={() => handleQuickDemo('admin@sobathr.com')}
-                className="flex-1 min-w-[45%] p-2.5 bg-white border border-purple-200 rounded-xl active:bg-purple-50 shadow-2xs"
-                activeOpacity={0.7}
-              >
-                <View className="flex-row items-center space-x-1 mb-1">
-                  <MaterialIcons name="admin-panel-settings" size={14} color="#7E22CE" />
-                  <Text className="text-xs font-bold text-purple-700">Super Admin</Text>
-                </View>
-                <Text className="text-[10px] text-slate-500 font-medium truncate">
-                  admin@sobathr.com
-                </Text>
-              </TouchableOpacity>
-
-              {/* HRBP Manager */}
-              <TouchableOpacity
-                onPress={() => handleQuickDemo('manager.hrbp@sobathr.com')}
-                className="flex-1 min-w-[45%] p-2.5 bg-white border border-indigo-200 rounded-xl active:bg-indigo-50 shadow-2xs"
-                activeOpacity={0.7}
-              >
-                <View className="flex-row items-center space-x-1 mb-1">
-                  <MaterialIcons name="business-center" size={14} color="#4338CA" />
-                  <Text className="text-xs font-bold text-indigo-700">Manager HRBP</Text>
-                </View>
-                <Text className="text-[10px] text-slate-500 font-medium truncate">
-                  manager.hrbp@sobathr.com
-                </Text>
-              </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 24 }}>
+              <MaterialIcons name="lock" size={14} color={COLORS.textMuted} />
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Terhubung aman dengan SobatHR TnD</Text>
             </View>
-          </View>
-
-          {/* Footer Info Box with Flat Icon */}
-          <View className="mt-6 pt-6 border-t border-slate-100 flex-row items-center justify-center space-x-2">
-            <MaterialIcons name="shield" size={16} color="#94A3B8" />
-            <Text className="text-slate-400 text-xs text-center">
-              Terhubung aman dengan SobatHR TnD System
-            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

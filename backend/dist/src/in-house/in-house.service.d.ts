@@ -73,6 +73,9 @@ export declare class InHouseService {
         total_score: number;
         percentage: number;
         grade: string;
+        pic_name: string | null;
+        trainer_signature: string | null;
+        pic_signature: string | null;
         notes: string | null;
     })[]>;
     getSessionById(id: string): Promise<({
@@ -113,6 +116,9 @@ export declare class InHouseService {
         total_score: number;
         percentage: number;
         grade: string;
+        pic_name: string | null;
+        trainer_signature: string | null;
+        pic_signature: string | null;
         notes: string | null;
     }) | null>;
     saveSession(payload: {
@@ -120,6 +126,9 @@ export declare class InHouseService {
         outlet_id?: string;
         trainee_name?: string;
         training_date?: string;
+        pic_name?: string;
+        trainer_signature?: string;
+        pic_signature?: string;
         notes?: string;
         assessments: Array<{
             checklist_point_id: string;
@@ -158,6 +167,9 @@ export declare class InHouseService {
         total_score: number;
         percentage: number;
         grade: string;
+        pic_name: string | null;
+        trainer_signature: string | null;
+        pic_signature: string | null;
         notes: string | null;
     }>;
     deleteSession(id: string): Promise<{
@@ -174,6 +186,9 @@ export declare class InHouseService {
         total_score: number;
         percentage: number;
         grade: string;
+        pic_name: string | null;
+        trainer_signature: string | null;
+        pic_signature: string | null;
         notes: string | null;
     }>;
 }

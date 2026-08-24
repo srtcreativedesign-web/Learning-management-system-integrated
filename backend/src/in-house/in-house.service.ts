@@ -226,6 +226,9 @@ export class InHouseService {
     outlet_id?: string;
     trainee_name?: string;
     training_date?: string;
+    pic_name?: string;
+    trainer_signature?: string;
+    pic_signature?: string;
     notes?: string;
     assessments: Array<{
       checklist_point_id: string;
@@ -277,6 +280,9 @@ export class InHouseService {
         percentage,
         grade: overallGrade,
         is_passed: isPassed,
+        pic_name: payload.pic_name || null,
+        trainer_signature: payload.trainer_signature || null,
+        pic_signature: payload.pic_signature || null,
         notes: payload.notes || null,
         assessments: {
           create: assessmentData

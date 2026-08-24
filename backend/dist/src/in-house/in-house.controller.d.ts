@@ -79,6 +79,9 @@ export declare class InHouseController {
             total_score: number;
             percentage: number;
             grade: string;
+            pic_name: string | null;
+            trainer_signature: string | null;
+            pic_signature: string | null;
             notes: string | null;
         })[];
     }>;
@@ -122,6 +125,9 @@ export declare class InHouseController {
             total_score: number;
             percentage: number;
             grade: string;
+            pic_name: string | null;
+            trainer_signature: string | null;
+            pic_signature: string | null;
             notes: string | null;
         }) | null;
     }>;
@@ -171,6 +177,9 @@ export declare class InHouseController {
             total_score: number;
             percentage: number;
             grade: string;
+            pic_name: string | null;
+            trainer_signature: string | null;
+            pic_signature: string | null;
             notes: string | null;
         };
     }>;

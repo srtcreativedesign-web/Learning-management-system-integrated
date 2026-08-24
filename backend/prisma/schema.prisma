@@ -323,11 +323,14 @@ model InHouseSession {
   total_score    Float                   @default(0)
   max_score      Float                   @default(0)
   percentage     Float                   @default(0)
-  grade          String                  @default("C") // SB, B, C, K
-  is_passed      Boolean                 @default(false)
-  notes          String?                 @db.Text
-  created_at     DateTime                @default(now())
-  updated_at     DateTime                @updatedAt
+  grade              String                  @default("C") // SB, B, C, K
+  is_passed          Boolean                 @default(false)
+  pic_name           String?
+  trainer_signature  String?                 @db.Text
+  pic_signature      String?                 @db.Text
+  notes              String?                 @db.Text
+  created_at         DateTime                @default(now())
+  updated_at         DateTime                @updatedAt
   
   assessments    InHouseAssessmentItem[]
 

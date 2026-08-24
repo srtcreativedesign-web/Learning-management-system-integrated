@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, SafeAreaView, Platform, StatusBar, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, RefreshControl } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
-import { fetchOutletsApi } from '../../src/services/api';
+import { fetchOutletsApi, fetchInHouseSessionsApi } from '../../src/services/api';
+import { InHouseAssessmentBottomSheet } from '../../src/components/training/InHouseAssessmentBottomSheet';
+import { BrandHeader, BrandStatusScrim } from '../../src/components/ui/BrandHeader';
+import { Card } from '../../src/components/ui/Card';
+import { GradeBadge } from '../../src/components/ui/GradeBadge';
+import { COLORS, RADIUS, SHADOW, TOUCH_MIN, TYPE, GRADE_COLOR } from '../../src/theme';
 
 interface OutletItem {
   id: string;
@@ -22,20 +27,74 @@ export default function OutletsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [realOutlets, setRealOutlets] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetchOutletsApi().then((data) => {
+  // In-House Assessment Sheet State
+  const [selectedOutlet, setSelectedOutlet] = useState<OutletItem | null>(null);
+  const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);
+  const [sessionResults, setSessionResults] = useState<Record<string, { grade: 'SB' | 'B' | 'C' | 'K'; score: number; status: string; date?: string }>>({});
+
+  // Returns a promise so pull-to-refresh knows when to stop spinning.
+  const loadData = () => {
+    // 1. Fetch Outlets
+    const outletsReq = fetchOutletsApi().then((data) => {
       if (data && data.length > 0) {
         setRealOutlets(data);
       }
     });
-  }, []);
+
+    // 2. Fetch Sessions from Backend DB to keep locked state after relogin
+    const sessionsReq = fetchInHouseSessionsApi().then((sessions) => {
+      if (sessions && Array.isArray(sessions) && sessions.length > 0) {
+        const resultsMap: Record<string, { grade: 'SB' | 'B' | 'C' | 'K'; score: number; status: string; date?: string }> = {};
+        sessions.forEach((s: any) => {
+          const status = s.is_passed ? 'Lulus Sesi' : 'Perlu Re-Training';
+          const grade = (s.grade || 'B') as 'SB' | 'B' | 'C' | 'K';
+          const score = Math.round(s.percentage || s.total_score || 85);
+          const date = s.training_date
+            ? new Date(s.training_date).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })
+            : 'Selesai';
+
+          if (s.outlet_id) {
+            resultsMap[s.outlet_id] = { grade, score, status, date };
+          }
+          if (s.outlet?.name) {
+            resultsMap[s.outlet.name] = { grade, score, status, date };
+          }
+          if (s.outlet_name) {
+            resultsMap[s.outlet_name] = { grade, score, status, date };
+          }
+        });
+
+        setSessionResults((prev) => ({
+          ...resultsMap,
+          ...prev,
+        }));
+      }
+    });
+
+    return Promise.all([outletsReq, sessionsReq]).catch(() => undefined);
+  };
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadData().finally(() => setIsRefreshing(false));
+  }, [user]);
 
   const defaultTrainerOutlets: OutletItem[] = [
-    { id: '1', name: 'Outlet Grand Indonesia', division: 'Barista & F&B', lastDate: '18 Agt 2026', status: 'Lulus Sesi', grade: 'SB', score: 96, staffCount: 6 },
-    { id: '2', name: 'Outlet Senayan City', division: 'Service & POS', lastDate: '15 Agt 2026', status: 'Lulus Sesi', grade: 'B', score: 84, staffCount: 4 },
-    { id: '3', name: 'Outlet Central Park', division: 'Kitchen & Higienitas', lastDate: '10 Agt 2026', status: 'Perlu Re-Training', grade: 'C', score: 68, staffCount: 5 },
-    { id: '4', name: 'Outlet Mall Kelapa Gading', division: 'All Station', lastDate: 'Hari Ini', status: 'Jadwal Hari Ini', staffCount: 8 },
-    { id: '5', name: 'Outlet Kota Kasablanka', division: 'Barista & Kasir', lastDate: '20 Agt 2026', status: 'Mendatang', staffCount: 6 },
+    { id: '1', name: 'HANS-YIA', division: 'Outlet YIA', lastDate: 'Database Terkini', status: 'Siap Training', grade: 'SB', score: 96, staffCount: 6 },
+    { id: '2', name: 'KINGTECH-T3E', division: 'Outlet T3E', lastDate: 'Database Terkini', status: 'Siap Training', grade: 'B', score: 84, staffCount: 4 },
+    { id: '3', name: 'Outlet Central Park', division: 'POS Terminal Central Park #1', lastDate: 'Database Terkini', status: 'Siap Training', grade: 'SB', score: 92, staffCount: 5 },
+    { id: '4', name: 'Outlet Grand Indonesia', division: 'POS Terminal Grand Indonesia #1', lastDate: 'Database Terkini', status: 'Siap Training', grade: 'B', score: 88, staffCount: 8 },
+    { id: '5', name: 'Outlet Kemang Raya', division: 'POS Terminal Kemang Raya #1', lastDate: 'Database Terkini', status: 'Siap Training', grade: 'C', score: 70, staffCount: 6 },
   ];
 
   const defaultAuditorOutlets: OutletItem[] = [
@@ -46,18 +105,31 @@ export default function OutletsScreen() {
     { id: '5', name: 'Outlet Tangerang', division: 'Peralatan & POS', lastDate: '28 Juni 2026', status: 'Non-Compliant', score: 70 },
   ];
 
-  const baseOutlets: OutletItem[] = realOutlets.length > 0
+  const baseOutlets: OutletItem[] = (realOutlets.length > 0
     ? realOutlets.map((o, idx) => ({
-        id: o.id || String(idx),
+        id: o.id || String(idx + 1),
         name: o.name,
-        division: o.device_name || (o.device_code ? `Kode: ${o.device_code}` : 'Barista & Kasir POS'),
+        division: o.device_name || (o.device_code ? `Kode: ${o.device_code}` : 'POS Terminal #1'),
         lastDate: 'Database Terkini',
         status: o.status === 'active' ? (isTrainer ? 'Siap Training' : 'Compliant') : 'Non-Compliant',
         grade: (['SB', 'B', 'SB', 'B', 'C', 'SB'][idx % 6]) as any,
         score: 85 + (idx % 12),
         staffCount: 5 + (idx % 4),
       }))
-    : (isTrainer ? defaultTrainerOutlets : defaultAuditorOutlets);
+    : (isTrainer ? defaultTrainerOutlets : defaultAuditorOutlets)
+  ).map((item) => {
+    const res = sessionResults[item.id] || sessionResults[item.name];
+    if (res) {
+      return {
+        ...item,
+        status: res.status,
+        grade: res.grade,
+        score: res.score,
+        lastDate: res.date ? `${res.date} (Selesai)` : 'Hari Ini (Selesai)',
+      };
+    }
+    return item;
+  });
 
   const outlets = baseOutlets.filter((item) => {
     const matchesFilter = filter === 'Semua' || item.status === filter;
@@ -65,20 +137,48 @@ export default function OutletsScreen() {
     return matchesFilter && matchesSearch;
   });
 
-  const handleStartActivity = (outletName: string) => {
+  const isOutletEvaluated = (outlet: OutletItem) => {
+    return (
+      Boolean(sessionResults[outlet.id] || sessionResults[outlet.name]) ||
+      outlet.status === 'Lulus Sesi' ||
+      outlet.status === 'Perlu Re-Training'
+    );
+  };
+
+  const handleStartActivity = (outlet: OutletItem) => {
     if (isTrainer) {
+      const isLocked = isOutletEvaluated(outlet);
+      if (isLocked) {
+        Alert.alert(
+          'Sesi Training Terkunci 🔒',
+          `Outlet ${outlet.name} sudah selesai dinilai dan disahkan.\n\n` +
+          `• Tanggal: ${outlet.lastDate}\n` +
+          `• Hasil Akhir: Grade ${outlet.grade || 'B'} (${outlet.score || 85}%)\n` +
+          `• Status: ${outlet.status.toUpperCase()}\n\n` +
+          `Data penilaian ini sudah ditandatangani digital oleh PIC Outlet dan Trainer, sehingga tidak dapat dinilai ulang.`,
+          [{ text: 'Tutup', style: 'default' }]
+        );
+        return;
+      }
+
       Alert.alert(
-        'Mulai In-House Training',
-        `Apakah Anda ingin membuka checklist penilaian (SB/B/C/K) untuk ${outletName}?`,
+        'Konfirmasi Mulai Penilaian',
+        `Apakah Anda ingin memulai lembar evaluasi in-house training on-site (SB/B/C/K) untuk ${outlet.name}?`,
         [
           { text: 'Batal', style: 'cancel' },
-          { text: 'Buka Checklist', onPress: () => Alert.alert('Lembar Penilaian Siap', 'Checklist 15 butir standar outlet siap dinilai.') },
+          {
+            text: 'Mulai Penilaian',
+            onPress: () => {
+              setSelectedOutlet(outlet);
+              setIsAssessmentOpen(true);
+            },
+          },
         ]
       );
     } else {
       Alert.alert(
         'Mulai Audit Lapangan',
-        `Mulai inspeksi kepatuhan untuk ${outletName}?`,
+        `Mulai inspeksi kepatuhan untuk ${outlet.name}?`,
         [
           { text: 'Batal', style: 'cancel' },
           { text: 'Mulai Inspeksi', onPress: () => Alert.alert('Audit Dimulai', 'Form audit kepatuhan dibuka.') },
@@ -87,116 +187,250 @@ export default function OutletsScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
-      
-      {/* Top Header Bar with Breathing Room */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: '#0B1C30', letterSpacing: -0.4 }}>
-          {isTrainer ? 'Kunjungan In-House Training' : 'Daftar Outlet Audit'}
-        </Text>
-        <Text style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-          {isTrainer ? 'Pilih outlet untuk evaluasi kompetensi on-site (SB/B/C/K)' : 'Pilih outlet untuk inspeksi kepatuhan & temuan'}
-        </Text>
-      </View>
+  const handleAssessmentSuccess = (result: {
+    outletId: string;
+    score: number;
+    grade: 'SB' | 'B' | 'C' | 'K';
+    isPassed: boolean;
+    status: string;
+  }) => {
+    if (selectedOutlet) {
+      setSessionResults((prev) => ({
+        ...prev,
+        [selectedOutlet.id]: {
+          grade: result.grade,
+          score: result.score,
+          status: result.status,
+        },
+        [selectedOutlet.name]: {
+          grade: result.grade,
+          score: result.score,
+          status: result.status,
+        },
+      }));
+    }
+  };
 
-      <ScrollView 
+  const trainerFilters = ['Semua', 'Jadwal Hari Ini', 'Lulus Sesi', 'Perlu Re-Training'];
+  const auditorFilters = ['Semua', 'Compliant', 'Non-Compliant'];
+
+  return (
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <BrandStatusScrim />
+
+
+      <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: 130 }}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Search Input */}
-        <View className="bg-white rounded-xl px-3.5 py-2.5 border border-slate-200 mb-3 flex-row items-center space-x-2">
-          <MaterialIcons name="search" size={20} color="#94A3B8" />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={isTrainer ? 'Cari nama cabang outlet...' : 'Cari outlet atau area inspeksi...'}
-            placeholderTextColor="#94A3B8"
-            className="text-slate-700 text-xs flex-1 p-0"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+            progressViewOffset={12}
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <MaterialIcons name="close" size={16} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
+        }
+      >
+      <BrandHeader
+        title={isTrainer ? 'Kunjungan In-House' : 'Outlet Audit'}
+        subtitle={
+          isTrainer
+            ? `${outlets.length} outlet siap dievaluasi on-site (SB/B/C/K)`
+            : `${outlets.length} outlet dalam cakupan inspeksi`
+        }
+        overlap
+      />
+
+        {/* Search floats over the header curve. */}
+        <View style={{ paddingHorizontal: 20, marginTop: -26 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              backgroundColor: COLORS.surface,
+              borderRadius: RADIUS.pill,
+              paddingHorizontal: 18,
+              minHeight: 52,
+              ...SHADOW.raised,
+            }}
+          >
+            <MaterialIcons name="search" size={21} color={COLORS.textMuted} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={isTrainer ? 'Cari nama cabang...' : 'Cari outlet atau area...'}
+              placeholderTextColor={COLORS.textMuted}
+              returnKeyType="search"
+              style={{ flex: 1, fontSize: 15, color: COLORS.textMain, padding: 0 }}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                accessibilityLabel="Hapus pencarian"
+                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              >
+                <MaterialIcons name="cancel" size={19} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-      {/* Filter Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-        {(isTrainer ? ['Semua', 'Jadwal Hari Ini', 'Lulus Sesi', 'Perlu Re-Training'] : ['Semua', 'Compliant', 'Non-Compliant']).map((f) => (
-          <TouchableOpacity
-            key={f}
-            onPress={() => setFilter(f)}
-            className={`px-3.5 py-1.5 rounded-full mr-2 border ${filter === f ? 'bg-[#419CC3] border-[#419CC3]' : 'bg-white border-slate-200'}`}
-          >
-            <Text className={`text-xs font-semibold ${filter === f ? 'text-white' : 'text-slate-600'}`}>
-              {f}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Outlet Cards */}
-      {outlets.map((outlet) => {
-        const isSuccess = outlet.status.includes('Lulus') || outlet.status === 'Compliant';
-        const isWarning = outlet.status.includes('Re-Training') || outlet.status === 'Non-Compliant';
-
-        return (
-          <TouchableOpacity
-            key={outlet.id}
-            onPress={() => handleStartActivity(outlet.name)}
-            activeOpacity={0.7}
-            className="bg-white rounded-xl p-4 border border-slate-200/80 mb-3 shadow-xs"
-          >
-            <View className="flex-row justify-between items-start mb-2">
-              <View className="flex-1 pr-2">
-                <Text className="font-bold text-slate-800 text-sm">{outlet.name}</Text>
-                <Text className="text-xs text-slate-500 mt-0.5 flex-row items-center">
-                  <MaterialIcons name="business" size={12} color="#64748B" /> {outlet.division}
-                </Text>
-              </View>
-              
-              {/* Badge */}
-              <View
-                className="px-2.5 py-1 rounded-md"
+        {/* Filter chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+          style={{ marginTop: 18, marginBottom: 6 }}
+        >
+          {(isTrainer ? trainerFilters : auditorFilters).map((f) => {
+            const active = filter === f;
+            return (
+              <TouchableOpacity
+                key={f}
+                onPress={() => setFilter(f)}
+                activeOpacity={0.8}
+                accessibilityState={{ selected: active }}
                 style={{
-                  backgroundColor: isSuccess ? '#ECFDF5' : isWarning ? '#FEF2F2' : '#EFF6FF',
+                  minHeight: 40,
+                  justifyContent: 'center',
+                  paddingHorizontal: 16,
+                  borderRadius: RADIUS.pill,
+                  backgroundColor: active ? COLORS.brandDeep : COLORS.surface,
+                  ...SHADOW.card,
                 }}
               >
-                <Text
-                  className="text-[11px] font-bold"
+                <Text style={{ ...TYPE.label, color: active ? COLORS.onBrand : COLORS.textSecondary }}>{f}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, gap: 12 }}>
+          {outlets.length === 0 && (
+            <Card style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: COLORS.surfaceSunken,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="search-off" size={28} color={COLORS.textMuted} />
+              </View>
+              <Text style={{ ...TYPE.h3, color: COLORS.textMain, marginTop: 14 }}>Outlet tidak ditemukan</Text>
+              <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>
+                Coba kata kunci lain atau ubah filter status.
+              </Text>
+              {(searchQuery.length > 0 || filter !== 'Semua') && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchQuery('');
+                    setFilter('Semua');
+                  }}
+                  activeOpacity={0.8}
                   style={{
-                    color: isSuccess ? '#059669' : isWarning ? '#DC2626' : '#2563EB',
+                    marginTop: 16,
+                    minHeight: 44,
+                    justifyContent: 'center',
+                    paddingHorizontal: 22,
+                    borderRadius: RADIUS.pill,
+                    backgroundColor: COLORS.primaryLight,
                   }}
                 >
-                  {outlet.grade ? `Grade ${outlet.grade} • ` : ''}{outlet.status}
-                </Text>
-              </View>
-            </View>
+                  <Text style={{ ...TYPE.label, color: COLORS.brandDark }}>Reset Filter</Text>
+                </TouchableOpacity>
+              )}
+            </Card>
+          )}
 
-            <View className="flex-row items-center justify-between mt-2 pt-2.5 border-t border-slate-100">
-              <View className="flex-row items-center space-x-1">
-                <MaterialIcons name="event" size={13} color="#94A3B8" />
-                <Text className="text-[11px] text-slate-400">
-                  {isTrainer ? 'Kunjungan: ' : 'Audit terakhir: '}{outlet.lastDate}
-                </Text>
-              </View>
+          {outlets.map((outlet) => {
+            const isLocked = isTrainer && isOutletEvaluated(outlet);
+            const isSuccess = outlet.status.includes('Lulus') || outlet.status === 'Compliant';
+            const isWarning = outlet.status.includes('Re-Training') || outlet.status === 'Non-Compliant';
+            const statusColor = isSuccess ? COLORS.success : isWarning ? COLORS.danger : COLORS.textSecondary;
 
-              <View className="flex-row items-center space-x-1 bg-[#419CC3]/10 px-2 py-1 rounded-md">
-                <Text className="text-[11px] font-bold text-[#419CC3]">
-                  {isTrainer ? 'Buka Penilaian' : 'Mulai Audit'}
-                </Text>
-                <MaterialIcons name="chevron-right" size={14} color="#419CC3" />
-              </View>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+            return (
+              <TouchableOpacity key={outlet.id} onPress={() => handleStartActivity(outlet)} activeOpacity={0.8}>
+                <Card padded={false} style={{ overflow: 'hidden' }}>
+
+                  <View style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13 }}>
+                      <GradeBadge grade={isTrainer ? outlet.grade : undefined} />
+
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain, flexShrink: 1 }} numberOfLines={1}>
+                            {outlet.name}
+                          </Text>
+                          {isLocked && <MaterialIcons name="lock" size={14} color={COLORS.textMuted} />}
+                        </View>
+                        <Text style={{ fontSize: 12.5, color: COLORS.textSecondary, marginTop: 3 }} numberOfLines={1}>
+                          {outlet.division}
+                        </Text>
+                      </View>
+
+                      {typeof outlet.score === 'number' && (
+                        <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.textMain, letterSpacing: -0.5 }}>
+                          {outlet.score}%
+                        </Text>
+                      )}
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginTop: 13,
+                        paddingTop: 12,
+                        borderTopWidth: 1,
+                        borderTopColor: COLORS.divider,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
+                        <Text style={{ fontSize: 12, color: COLORS.textSecondary, flex: 1 }} numberOfLines={1}>
+                          {outlet.status}
+                        </Text>
+                      </View>
+
+                      {isLocked ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <MaterialIcons name="verified" size={15} color={COLORS.success} />
+                          <Text style={{ ...TYPE.micro, color: COLORS.success }}>DISAHKAN</Text>
+                        </View>
+                      ) : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Text style={{ ...TYPE.label, color: COLORS.primary }}>
+                            {isTrainer ? 'Buka Penilaian' : 'Mulai Audit'}
+                          </Text>
+                          <MaterialIcons name="chevron-right" size={18} color={COLORS.primary} />
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </Card>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* In-House Training Assessment BottomSheet Modal */}
+      <InHouseAssessmentBottomSheet
+        visible={isAssessmentOpen}
+        outlet={selectedOutlet}
+        trainerName={user?.name || 'Trainer TnD'}
+        onClose={() => setIsAssessmentOpen(false)}
+        onSuccess={handleAssessmentSuccess}
+      />
+    </View>
   );
 }
-
-
