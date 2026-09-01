@@ -57,6 +57,8 @@ export const App: React.FC = () => {
                 <Route path="/in-house/checklists" element={<InHouseChecklistBuilder />} />
                 <Route path="/in-house/sessions" element={<InHouseSessionsView />} />
                 <Route path="/analytics/quiz-history" element={<QuizHistoryView />} />
+                <Route path="/analytics/training" element={<TrainingAnalytics />} />
+                <Route path="/analytics/training-report" element={<TrainingAnalytics />} />
                 <Route path="/analytics/training/in-class" element={<TrainingAnalytics />} />
                 <Route path="/analytics/training/on-site" element={<TrainingAnalytics />} />
                 <Route path="/analytics/training/online" element={<TrainingAnalytics />} />

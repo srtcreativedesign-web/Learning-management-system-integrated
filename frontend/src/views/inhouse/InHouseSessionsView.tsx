@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import {
   GraduationCap,
   Plus,
-  Search,
   Store,
   Calendar,
   CheckCircle2,
@@ -30,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
+import { DataTable, dataTableHelper } from '@/components/common/DataTable';
 import { getApiUrl } from '@/lib/api';
 import { printEvaluationReport } from '@/utils/printEvaluationReport';
 
@@ -77,11 +77,169 @@ interface Outlet {
   name: string;
 }
 
+const getGradeBadge = (grade: string) => {
+  switch (grade) {
+    case 'SB':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+          <Award className="w-3 h-3 text-emerald-600" /> SB (Sangat Baik)
+        </span>
+      );
+    case 'B':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-sky-100 text-sky-800 border border-sky-300">
+          <CheckCircle2 className="w-3 h-3 text-sky-600" /> B (Baik)
+        </span>
+      );
+    case 'C':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+          C (Cukup)
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300">
+          <XCircle className="w-3 h-3 text-rose-600" /> K (Kurang)
+        </span>
+      );
+  }
+};
+
+const column = dataTableHelper<InHouseSession>();
+
+const buildColumns = ({
+  outlets,
+  onPrint,
+  onDetail,
+  onDelete,
+}: {
+  outlets: Outlet[];
+  onPrint: (session: InHouseSession) => void;
+  onDetail: (session: InHouseSession) => void;
+  onDelete: (id: string) => void;
+}) =>
+  column.columns([
+    column.accessor('training_date', {
+      header: 'Tanggal & Outlet',
+      sortFn: 'datetime',
+      cell: ({ row, getValue }) => (
+        <>
+          <div className="font-bold text-slate-800 flex items-center gap-1.5">
+            <Store className="w-3.5 h-3.5 text-[#419CC3]" />
+            {outlets.find((o) => o.id === row.original.outlet_id)?.name || 'Outlet Umum'}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5">
+            {new Date(getValue()).toLocaleDateString('id-ID', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </div>
+        </>
+      ),
+    }),
+    column.accessor('trainee_name', {
+      header: 'Peserta Training',
+      cell: ({ row, getValue }) => (
+        <>
+          <div className="font-bold text-slate-800">{getValue()}</div>
+          <div className="text-[11px] text-slate-400">
+            {row.original.assessments?.length || 0} butir penilaian
+          </div>
+        </>
+      ),
+    }),
+    column.accessor('trainer_name', {
+      header: 'Trainer',
+      cell: ({ getValue }) => (
+        <div className="text-slate-600 font-medium flex items-center gap-1">
+          <User className="w-3 h-3 text-slate-400" />
+          {getValue()}
+        </div>
+      ),
+    }),
+    column.accessor('total_score', {
+      header: 'Skor Kumulatif',
+      meta: { align: 'center' },
+      cell: ({ row, getValue }) => (
+        <span className="font-bold text-slate-800">
+          {getValue()} / {row.original.max_score}
+        </span>
+      ),
+    }),
+    column.accessor('percentage', {
+      header: 'Persentase (%)',
+      meta: { align: 'center' },
+      sortDescFirst: true,
+      cell: ({ getValue }) => (
+        <span className="font-extrabold text-[#419CC3] text-sm">{getValue()}%</span>
+      ),
+    }),
+    column.accessor('grade', {
+      header: 'Predikat',
+      meta: { align: 'center' },
+      enableSorting: false,
+      cell: ({ getValue }) => getGradeBadge(getValue()),
+    }),
+    column.accessor('is_passed', {
+      header: 'Status',
+      meta: { align: 'center' },
+      enableSorting: false,
+      cell: ({ getValue }) =>
+        getValue() ? (
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Lulus
+          </span>
+        ) : (
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            Retraining
+          </span>
+        ),
+    }),
+    column.display({
+      id: 'actions',
+      header: 'Aksi',
+      meta: { align: 'right' },
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPrint(row.original)}
+            className="h-8 px-2.5 text-xs text-slate-700 hover:text-[#419CC3] hover:border-[#419CC3] font-semibold border-slate-200"
+            title="Cetak Berita Acara & Laporan PDF Resmi"
+          >
+            <Printer className="w-3.5 h-3.5 mr-1" />
+            PDF
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDetail(row.original)}
+            className="h-8 px-2.5 text-xs text-[#419CC3] hover:bg-[#419CC3]/10 font-bold"
+          >
+            <Eye className="w-3.5 h-3.5 mr-1" />
+            Detail
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(row.original.id)}
+            className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+            title="Hapus Rekap"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      ),
+    }),
+  ]);
+
 export const InHouseSessionsView: React.FC = () => {
   const [sessions, setSessions] = useState<InHouseSession[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedOutlet, setSelectedOutlet] = useState<string>('all');
   const [selectedSession, setSelectedSession] = useState<InHouseSession | null>(null);
 
@@ -225,7 +383,7 @@ export const InHouseSessionsView: React.FC = () => {
     }
   };
 
-  const handleDeleteSession = async (id: string) => {
+  const handleDeleteSession = useCallback(async (id: string) => {
     if (!window.confirm('Yakin ingin menghapus riwayat sesi training ini?')) return;
     try {
       const res = await fetch(getApiUrl(`/in-house/sessions/${id}`), {
@@ -238,15 +396,15 @@ export const InHouseSessionsView: React.FC = () => {
     } catch (err) {
       console.error('Failed to delete session', err);
     }
-  };
+  }, []);
 
-  const filteredSessions = sessions.filter((s) => {
-    const matchesSearch =
-      s.trainee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.trainer_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesOutlet = selectedOutlet === 'all' || s.outlet_id === selectedOutlet;
-    return matchesSearch && matchesOutlet;
-  });
+  const outletSessions = useMemo(
+    () =>
+      selectedOutlet === 'all'
+        ? sessions
+        : sessions.filter((s) => s.outlet_id === selectedOutlet),
+    [sessions, selectedOutlet],
+  );
 
   // Group assessments by Category for selectedSession
   const groupedAssessments = useMemo(() => {
@@ -319,42 +477,22 @@ export const InHouseSessionsView: React.FC = () => {
     }
   };
 
-  const handlePrint = (sessionToPrint?: InHouseSession) => {
-    const target = sessionToPrint || selectedSession;
-    if (target) {
-      const outletName = outlets.find((o) => o.id === target.outlet_id)?.name || 'Outlet Cabang';
-      printEvaluationReport(target, outletName);
-    }
-  };
+  const handlePrint = useCallback(
+    (sessionToPrint?: InHouseSession) => {
+      const target = sessionToPrint || selectedSession;
+      if (target) {
+        const outletName = outlets.find((o) => o.id === target.outlet_id)?.name || 'Outlet Cabang';
+        printEvaluationReport(target, outletName);
+      }
+    },
+    [selectedSession, outlets],
+  );
 
-  const getGradeBadge = (grade: string) => {
-    switch (grade) {
-      case 'SB':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-            <Award className="w-3 h-3 text-emerald-600" /> SB (Sangat Baik)
-          </span>
-        );
-      case 'B':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-sky-100 text-sky-800 border border-sky-300">
-            <CheckCircle2 className="w-3 h-3 text-sky-600" /> B (Baik)
-          </span>
-        );
-      case 'C':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
-            C (Cukup)
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300">
-            <XCircle className="w-3 h-3 text-rose-600" /> K (Kurang)
-          </span>
-        );
-    }
-  };
+
+  const columns = useMemo(
+    () => buildColumns({ outlets, onPrint: handlePrint, onDetail: setSelectedSession, onDelete: handleDeleteSession }),
+    [outlets, handlePrint, handleDeleteSession],
+  );
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -374,42 +512,8 @@ export const InHouseSessionsView: React.FC = () => {
         }
       />
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Cari nama peserta / trainer..."
-            className="pl-9 text-xs"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Store className="w-4 h-4 text-slate-400" />
-          <select
-            value={selectedOutlet}
-            onChange={(e) => setSelectedOutlet(e.target.value)}
-            className="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#419CC3]"
-          >
-            <option value="all">Semua Outlet</option>
-            {outlets.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
       {/* Sessions Table */}
-      {isLoading ? (
-        <div className="py-24 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#419CC3] mb-3" />
-          <p className="text-sm font-medium text-slate-500">Memuat riwayat sesi training...</p>
-        </div>
-      ) : filteredSessions.length === 0 ? (
+      {!isLoading && sessions.length === 0 ? (
         <EmptyState
           icon={<FileSpreadsheet className="w-8 h-8 text-slate-400" />}
           title="Belum Ada Rekap Penilaian Training"
@@ -419,119 +523,33 @@ export const InHouseSessionsView: React.FC = () => {
           onAction={openNewAssessmentModal}
         />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                <tr>
-                  <th className="py-3.5 px-4">Tanggal & Outlet</th>
-                  <th className="py-3.5 px-4">Peserta Training</th>
-                  <th className="py-3.5 px-4">Trainer</th>
-                  <th className="py-3.5 px-4 text-center">Skor Kumulatif</th>
-                  <th className="py-3.5 px-4 text-center">Persentase (%)</th>
-                  <th className="py-3.5 px-4 text-center">Predikat</th>
-                  <th className="py-3.5 px-4 text-center">Status</th>
-                  <th className="py-3.5 px-4 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {filteredSessions.map((session) => {
-                  const outlet = outlets.find((o) => o.id === session.outlet_id);
-                  const formattedDate = new Date(session.training_date).toLocaleDateString('id-ID', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  });
-
-                  return (
-                    <tr key={session.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <Store className="w-3.5 h-3.5 text-[#419CC3]" />
-                          {outlet?.name || 'Outlet Umum'}
-                        </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">{formattedDate}</div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-800">{session.trainee_name}</div>
-                        <div className="text-[11px] text-slate-400">
-                          {session.assessments?.length || 0} butir penilaian
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <div className="text-slate-600 font-medium flex items-center gap-1">
-                          <User className="w-3 h-3 text-slate-400" />
-                          {session.trainer_name}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="font-bold text-slate-800">
-                          {session.total_score} / {session.max_score}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="font-extrabold text-[#419CC3] text-sm">
-                          {session.percentage}%
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">{getGradeBadge(session.grade)}</td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        {session.is_passed ? (
-                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Lulus
-                          </span>
-                        ) : (
-                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                            Retraining
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePrint(session)}
-                            className="h-8 px-2.5 text-xs text-slate-700 hover:text-[#419CC3] hover:border-[#419CC3] font-semibold border-slate-200"
-                            title="Cetak Berita Acara & Laporan PDF Resmi"
-                          >
-                            <Printer className="w-3.5 h-3.5 mr-1" />
-                            PDF
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedSession(session)}
-                            className="h-8 px-2.5 text-xs text-[#419CC3] hover:bg-[#419CC3]/10 font-bold"
-                          >
-                            <Eye className="w-3.5 h-3.5 mr-1" />
-                            Detail
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteSession(session.id)}
-                            className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                            title="Hapus Rekap"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          data={outletSessions}
+          columns={columns}
+          isLoading={isLoading}
+          getRowId={(row) => row.id}
+          urlKey="inhouse"
+          searchPlaceholder="Cari nama peserta / trainer..."
+          emptyMessage="Tidak ada sesi training pada outlet ini."
+          toolbar={
+            <div className="flex items-center gap-2">
+              <Store className="w-4 h-4 text-slate-400" />
+              <select
+                value={selectedOutlet}
+                onChange={(e) => setSelectedOutlet(e.target.value)}
+                aria-label="Filter outlet"
+                className="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#419CC3]"
+              >
+                <option value="all">Semua Outlet</option>
+                {outlets.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          }
+        />
       )}
 
       {/* MODAL: Input Sesi Penilaian Baru */}

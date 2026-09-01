@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Award, Pencil, AlertCircle, Loader2, Gift } from 'lucide-react';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PageHeader } from '@/components/common/PageHeader';
-import { DataTable, ColumnDef } from '@/components/common/DataTable';
+import { DataTable, dataTableHelper } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import {
   Dialog,
@@ -24,6 +24,64 @@ interface LeaderboardUser {
   total_xp: number;
   quizzes_completed: number;
 }
+
+const column = dataTableHelper<LeaderboardUser>();
+
+const buildColumns = (onEdit: (row: LeaderboardUser) => void) =>
+  column.columns([
+    column.display({
+      id: 'rank',
+      header: 'Peringkat',
+      meta: { align: 'center', className: 'w-20' },
+      // Follows the current sort order, unlike the row's creation index.
+      cell: ({ row }) => (
+        <span className="font-bold text-slate-500 text-xs">#{row.getDisplayIndex() + 1}</span>
+      ),
+    }),
+    column.accessor('hris_user_id', {
+      header: 'ID Karyawan',
+      cell: ({ getValue }) => (
+        <span className="font-mono text-xs text-slate-500 font-semibold">{getValue()}</span>
+      ),
+    }),
+    column.accessor('full_name', {
+      header: 'Nama Karyawan',
+      cell: ({ getValue }) => <span className="font-bold text-slate-800">{getValue()}</span>,
+    }),
+    column.accessor('current_rank', {
+      header: 'Pangkat (Rank)',
+      cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+    }),
+    column.accessor('total_xp', {
+      header: 'Total XP',
+      sortDescFirst: true,
+      cell: ({ getValue }) => (
+        <span className="font-extrabold text-[#419CC3]">{getValue()} XP</span>
+      ),
+    }),
+    column.accessor('quizzes_completed', {
+      header: 'Kuis Selesai',
+      sortDescFirst: true,
+      cell: ({ getValue }) => (
+        <span className="font-semibold text-slate-600">{getValue()}</span>
+      ),
+    }),
+    column.display({
+      id: 'actions',
+      header: 'Aksi',
+      meta: { align: 'center', className: 'w-20' },
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onEdit(row.original)}
+          className="text-slate-400 hover:text-[#419CC3] hover:bg-[#419CC3]/10 rounded-full h-8 w-8"
+        >
+          <Pencil className="w-4 h-4" />
+        </Button>
+      ),
+    }),
+  ]);
 
 export const LeaderboardView: React.FC = () => {
   const navigate = useNavigate();
@@ -45,7 +103,7 @@ export const LeaderboardView: React.FC = () => {
     },
   });
 
-  const openEditModal = (user: LeaderboardUser) => {
+  const openEditModal = useCallback((user: LeaderboardUser) => {
     setEditData({
       hris_user_id: user.hris_user_id,
       full_name: user.full_name,
@@ -53,7 +111,9 @@ export const LeaderboardView: React.FC = () => {
       reason: '',
     });
     setShowDialog(true);
-  };
+  }, []);
+
+  const columns = useMemo(() => buildColumns(openEditModal), [openEditModal]);
 
   const handleSaveXp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,68 +148,6 @@ export const LeaderboardView: React.FC = () => {
     }
   };
 
-  const columns: ColumnDef<LeaderboardUser>[] = [
-    {
-      key: 'rank',
-      header: 'Peringkat',
-      align: 'center',
-      className: 'w-20',
-      render: (_, index) => (
-        <span className="font-bold text-slate-500 text-xs">#{index + 1}</span>
-      ),
-    },
-    {
-      key: 'hris_user_id',
-      header: 'ID Karyawan',
-      sortable: true,
-      render: (row) => (
-        <span className="font-mono text-xs text-slate-500 font-semibold">{row.hris_user_id}</span>
-      ),
-    },
-    {
-      key: 'full_name',
-      header: 'Nama Karyawan',
-      sortable: true,
-      render: (row) => <span className="font-bold text-slate-800">{row.full_name}</span>,
-    },
-    {
-      key: 'current_rank',
-      header: 'Pangkat (Rank)',
-      sortable: true,
-      render: (row) => <StatusBadge status={row.current_rank} />,
-    },
-    {
-      key: 'total_xp',
-      header: 'Total XP',
-      sortable: true,
-      render: (row) => (
-        <span className="font-extrabold text-[#419CC3]">{row.total_xp} XP</span>
-      ),
-    },
-    {
-      key: 'quizzes_completed',
-      header: 'Kuis Selesai',
-      sortable: true,
-      render: (row) => <span className="font-semibold text-slate-600">{row.quizzes_completed}</span>,
-    },
-    {
-      key: 'actions',
-      header: 'Aksi',
-      align: 'center',
-      className: 'w-20',
-      render: (row) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => openEditModal(row)}
-          className="text-slate-400 hover:text-[#419CC3] hover:bg-[#419CC3]/10 rounded-full h-8 w-8"
-        >
-          <Pencil className="w-4 h-4" />
-        </Button>
-      ),
-    },
-  ];
-
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
       {/* Reusable Page Header */}
@@ -173,6 +171,8 @@ export const LeaderboardView: React.FC = () => {
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Cari ID atau Nama Karyawan..."
+        urlKey="lb"
+        getRowId={(row) => row.hris_user_id}
         emptyMessage="Belum ada data peringkat karyawan."
       />
 

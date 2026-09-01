@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   History,
@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/common/PageHeader';
-import { DataTable, ColumnDef } from '@/components/common/DataTable';
+import { DataTable, dataTableHelper } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import {
   Dialog,
@@ -58,6 +58,86 @@ interface Attempt {
   }>;
 }
 
+const formatDate = (dateString?: string) => {
+  if (!dateString) return '-';
+  const d = new Date(dateString);
+  return d.toLocaleDateString('id-ID', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const column = dataTableHelper<Attempt>();
+
+const buildColumns = (onOpenDetails: (row: Attempt) => void) =>
+  column.columns([
+    column.accessor((row) => row.User?.full_name ?? '', {
+      id: 'user',
+      header: 'Karyawan',
+      cell: ({ row }) => (
+        <div className="flex flex-col">
+          <span className="font-bold text-slate-800">{row.original.User?.full_name || 'Unknown'}</span>
+          <span className="text-xs text-slate-400 font-mono">ID: {row.original.User?.hris_user_id}</span>
+        </div>
+      ),
+    }),
+    column.accessor((row) => row.Quiz?.Material?.Course?.title ?? '', {
+      id: 'course',
+      header: 'Materi / Kursus',
+      enableSorting: false,
+      cell: ({ getValue }) => (
+        <span className="font-semibold text-slate-700">{getValue() || '-'}</span>
+      ),
+    }),
+    column.accessor('score', {
+      header: 'Skor',
+      cell: ({ row, getValue }) => (
+        <span
+          className={`font-extrabold ${
+            row.original.is_passed ? 'text-emerald-600' : 'text-rose-500'
+          }`}
+        >
+          {Number(getValue()).toFixed(0)} / 100
+        </span>
+      ),
+    }),
+    column.accessor('xp_awarded', {
+      header: 'XP Didapat',
+      cell: ({ getValue }) => <span className="font-bold text-[#419CC3]">+{getValue()} XP</span>,
+    }),
+    column.accessor('is_passed', {
+      header: 'Status',
+      enableSorting: false,
+      meta: { align: 'center' },
+      cell: ({ getValue }) => <StatusBadge status={getValue() ? 'passed' : 'failed'} />,
+    }),
+    column.accessor('created_at', {
+      header: 'Tanggal',
+      sortFn: 'datetime',
+      cell: ({ getValue }) => (
+        <span className="text-xs text-slate-500">{formatDate(getValue())}</span>
+      ),
+    }),
+    column.display({
+      id: 'actions',
+      header: 'Evaluasi',
+      meta: { align: 'center', className: 'w-20' },
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onOpenDetails(row.original)}
+          className="text-slate-400 hover:text-[#419CC3] hover:bg-[#419CC3]/10 rounded-full h-8 w-8"
+        >
+          <Search className="w-4 h-4" />
+        </Button>
+      ),
+    }),
+  ]);
+
 export const QuizHistoryView: React.FC = () => {
   const [selectedAttempt, setSelectedAttempt] = useState<Attempt | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -71,95 +151,13 @@ export const QuizHistoryView: React.FC = () => {
     },
   });
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    const d = new Date(dateString);
-    return d.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
-  const openDetails = (data: Attempt) => {
+  const openDetails = useCallback((data: Attempt) => {
     setSelectedAttempt(data);
     setShowDetail(true);
-  };
+  }, []);
 
-  const columns: ColumnDef<Attempt>[] = [
-    {
-      key: 'user',
-      header: 'Karyawan',
-      sortable: true,
-      render: (row) => (
-        <div className="flex flex-col">
-          <span className="font-bold text-slate-800">{row.User?.full_name || 'Unknown'}</span>
-          <span className="text-xs text-slate-400 font-mono">ID: {row.User?.hris_user_id}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'course',
-      header: 'Materi / Kursus',
-      render: (row) => (
-        <span className="font-semibold text-slate-700">
-          {row.Quiz?.Material?.Course?.title || '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'score',
-      header: 'Skor',
-      sortable: true,
-      render: (row) => (
-        <span
-          className={`font-extrabold ${
-            row.is_passed ? 'text-emerald-600' : 'text-rose-500'
-          }`}
-        >
-          {Number(row.score).toFixed(0)} / 100
-        </span>
-      ),
-    },
-    {
-      key: 'xp_awarded',
-      header: 'XP Didapat',
-      sortable: true,
-      render: (row) => <span className="font-bold text-[#419CC3]">+{row.xp_awarded} XP</span>,
-    },
-    {
-      key: 'is_passed',
-      header: 'Status',
-      align: 'center',
-      render: (row) => <StatusBadge status={row.is_passed ? 'passed' : 'failed'} />,
-    },
-    {
-      key: 'created_at',
-      header: 'Tanggal',
-      sortable: true,
-      render: (row) => (
-        <span className="text-xs text-slate-500">{formatDate(row.created_at)}</span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Evaluasi',
-      align: 'center',
-      className: 'w-20',
-      render: (row) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => openDetails(row)}
-          className="text-slate-400 hover:text-[#419CC3] hover:bg-[#419CC3]/10 rounded-full h-8 w-8"
-        >
-          <Search className="w-4 h-4" />
-        </Button>
-      ),
-    },
-  ];
+  const columns = useMemo(() => buildColumns(openDetails), [openDetails]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -187,6 +185,7 @@ export const QuizHistoryView: React.FC = () => {
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Cari riwayat kuis karyawan..."
+        urlKey="quiz"
         emptyMessage="Belum ada riwayat pengerjaan kuis."
       />
 

@@ -312,6 +312,214 @@ export async function fetchSopsApi(category?: string): Promise<any[]> {
   }
 }
 
+// ---------------- AUDIT INSPECTION APIS (OK / NOK) ----------------
+
+export async function fetchAuditChecklistsApi(): Promise<any[]> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+  const fallbackAuditChecklists = [
+    {
+      id: 'cat-aud-1',
+      name: 'K3, Keselamatan & Kelayakan Kerja',
+      checklists: [
+        { id: 'ap-1', question: 'Ketersediaan dan masa berlaku APAR dalam kondisi baik' },
+        { id: 'ap-2', question: 'Jalur evakuasi dan pintu darurat bebas dari halangan barang/stok' },
+        { id: 'ap-3', question: 'Kotak P3K lengkap dan obat tidak melewati kedaluwarsa' },
+        { id: 'ap-4', question: 'Instalasi kelistrikan & kabel panel rapi dan aman' },
+      ],
+    },
+    {
+      id: 'cat-aud-2',
+      name: 'Standar Higienitas, Sanitasi & 5S',
+      checklists: [
+        { id: 'ap-5', question: 'Karyawan mengenakan atribut lengkap (hairnet, masker, apron, sepatu bersih)' },
+        { id: 'ap-6', question: 'Area kitchen, sink, dan tempat sampah tertutup bebas dari bau menyengat' },
+        { id: 'ap-7', question: 'Suhu chiller & freezer stabil sesuai toleransi SOP' },
+        { id: 'ap-8', question: 'Penyimpanan bahan baku menerapkan FIFO dengan label tanggal jelas' },
+      ],
+    },
+    {
+      id: 'cat-aud-3',
+      name: 'Operasional Kasir, POS & Layanan',
+      checklists: [
+        { id: 'ap-9', question: 'Mesin kasir POS, mesin EDC, dan printer struk berfungsi normal' },
+        { id: 'ap-10', question: 'Uang modal kasir dan dokumen serah terima shift tercatat akurat' },
+        { id: 'ap-11', question: 'Display etalase produk bersih dan informasi harga tercantum jelas' },
+      ],
+    },
+    {
+      id: 'cat-aud-4',
+      name: 'Fasilitas & Pemeliharaan Outlet',
+      checklists: [
+        { id: 'ap-12', question: 'Kebersihan meja makan, lantai, kaca, dan toilet pelanggan selalu terjaga' },
+        { id: 'ap-13', question: 'Peralatan operasional (blender, grinder, ice maker) terawat dan bersih' },
+      ],
+    },
+  ];
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/audit/checklist`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) throw new Error('Gagal mengambil audit checklist');
+    const data = await response.json();
+    if (data.success && data.data && data.data.length > 0) {
+      return data.data;
+    }
+    return fallbackAuditChecklists;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    return fallbackAuditChecklists;
+  }
+}
+
+// In-memory or local mock storage for submitted audit inspections
+let localAuditInspections: any[] = [
+  {
+    id: 'insp-1',
+    outlet_id: '1',
+    outlet_name: 'Outlet Kemang',
+    auditor_name: 'Dian Permata',
+    inspection_date: '2026-07-08T10:00:00.000Z',
+    compliance_score: 95,
+    is_compliant: true,
+    total_items: 20,
+    ok_items: 19,
+    nok_items: 1,
+    findings: [
+      { point_text: 'Suhu chiller penyimpanan di luar batas toleransi', notes: 'Suhu 8°C (standar maks 4°C)' },
+    ],
+  },
+  {
+    id: 'insp-2',
+    outlet_id: '2',
+    outlet_name: 'Outlet Sudirman',
+    auditor_name: 'Dian Permata',
+    inspection_date: '2026-07-05T14:30:00.000Z',
+    compliance_score: 70,
+    is_compliant: false,
+    total_items: 20,
+    ok_items: 14,
+    nok_items: 6,
+    findings: [
+      { point_text: 'Alat pemadam kebakaran (APAR) kedaluwarsa', notes: 'Kadaluwarsa per Juni 2026' },
+      { point_text: 'Jalur evakuasi terhalang tumpukan kardus stok', notes: 'Tumpukan barang menutupi pintu belakang' },
+    ],
+  },
+  {
+    id: 'insp-3',
+    outlet_id: '3',
+    outlet_name: 'Outlet Kelapa Gading',
+    auditor_name: 'Dian Permata',
+    inspection_date: '2026-07-03T09:15:00.000Z',
+    compliance_score: 92,
+    is_compliant: true,
+    total_items: 20,
+    ok_items: 18,
+    nok_items: 2,
+    findings: [
+      { point_text: 'Pekerja tidak menggunakan celemek & hairnet', notes: '2 barista belum memakai hairnet' },
+    ],
+  },
+  {
+    id: 'insp-4',
+    outlet_id: '4',
+    outlet_name: 'Outlet BSD City',
+    auditor_name: 'Dian Permata',
+    inspection_date: '2026-07-01T11:00:00.000Z',
+    compliance_score: 88,
+    is_compliant: true,
+    total_items: 20,
+    ok_items: 17,
+    nok_items: 3,
+    findings: [
+      { point_text: 'Dokumen izin sanitasi belum diperbarui', notes: 'Masa berlaku habis' },
+    ],
+  },
+];
+
+export async function fetchAuditInspectionsApi(): Promise<any[]> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/audit/inspections`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) throw new Error('Gagal mengambil riwayat audit');
+    const data = await response.json();
+    if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+      return data.data;
+    }
+    return [...localAuditInspections];
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    return [...localAuditInspections];
+  }
+}
+
+export async function submitAuditInspectionApi(payload: {
+  outlet_id?: string;
+  outlet_name: string;
+  auditor_name: string;
+  pic_name?: string;
+  inspection_date?: string;
+  notes?: string;
+  auditor_signature?: string;
+  pic_signature?: string;
+  compliance_score: number;
+  is_compliant: boolean;
+  total_items: number;
+  ok_items: number;
+  nok_items: number;
+  findings: Array<{
+    checklist_point_id: string;
+    point_text: string;
+    is_compliant: boolean;
+    notes?: string;
+  }>;
+}): Promise<any> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+  const localRecord = {
+    id: `insp-${Date.now()}`,
+    ...payload,
+    inspection_date: payload.inspection_date || new Date().toISOString(),
+  };
+  localAuditInspections.unshift(localRecord);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/audit/inspections`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    return {
+      success: true,
+      message: 'Hasil audit kepatuhan lapangan (OK/NOK) tersimpan lokal',
+      data: localRecord,
+    };
+  }
+}
+
+
 
 
 

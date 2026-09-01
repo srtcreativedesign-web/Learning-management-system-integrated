@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Store, RefreshCw, Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
-import { DataTable, ColumnDef } from '@/components/common/DataTable';
+import { DataTable, dataTableHelper } from '@/components/common/DataTable';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { getApiUrl } from '@/lib/api';
 
@@ -15,6 +15,40 @@ interface Outlet {
   address?: string;
   status: 'active' | 'inactive';
 }
+
+const column = dataTableHelper<Outlet>();
+
+const columns = column.columns([
+  column.accessor('name', {
+    header: 'Nama Outlet',
+    cell: ({ getValue }) => <span className="font-bold text-slate-800">{getValue()}</span>,
+  }),
+  column.accessor('device_code', {
+    header: 'Kode Perangkat (HRIS)',
+    cell: ({ getValue }) => (
+      <span className="font-mono text-xs text-slate-500 font-semibold">{getValue() || '-'}</span>
+    ),
+  }),
+  column.accessor('device_name', {
+    header: 'Nama Perangkat',
+    enableSorting: false,
+    cell: ({ getValue }) => <span className="text-slate-600">{getValue() || '-'}</span>,
+  }),
+  column.accessor('address', {
+    header: 'Alamat',
+    enableSorting: false,
+    cell: ({ getValue }) => (
+      <span className="text-xs text-slate-500 max-w-[280px] block truncate">
+        {getValue() || '-'}
+      </span>
+    ),
+  }),
+  column.accessor('status', {
+    header: 'Status',
+    meta: { align: 'center' },
+    cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+  }),
+]);
 
 export const OutletManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -47,45 +81,6 @@ export const OutletManagement: React.FC = () => {
       alert(err.message || 'Gagal menghubungi Backend NestJS atau Server HRIS.');
     },
   });
-
-  const columns: ColumnDef<Outlet>[] = [
-    {
-      key: 'name',
-      header: 'Nama Outlet',
-      sortable: true,
-      render: (row) => <span className="font-bold text-slate-800">{row.name}</span>,
-    },
-    {
-      key: 'device_code',
-      header: 'Kode Perangkat (HRIS)',
-      sortable: true,
-      render: (row) => (
-        <span className="font-mono text-xs text-slate-500 font-semibold">
-          {row.device_code || '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'device_name',
-      header: 'Nama Perangkat',
-      render: (row) => <span className="text-slate-600">{row.device_name || '-'}</span>,
-    },
-    {
-      key: 'address',
-      header: 'Alamat',
-      render: (row) => (
-        <span className="text-xs text-slate-500 max-w-[280px] block truncate">
-          {row.address || '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      align: 'center',
-      render: (row) => <StatusBadge status={row.status} />,
-    },
-  ];
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">

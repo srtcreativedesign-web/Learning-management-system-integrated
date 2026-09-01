@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChecklistController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const checklist_service_1 = require("./checklist.service");
 let ChecklistController = class ChecklistController {
     checklistService;
@@ -24,34 +25,67 @@ let ChecklistController = class ChecklistController {
         const data = await this.checklistService.getCategories();
         return {
             success: true,
-            data
+            data,
         };
     }
     async syncStructure(payload) {
         const data = await this.checklistService.syncStructure(payload.categories);
         return {
             success: true,
-            message: 'Checklist structure updated successfully',
-            data
+            message: 'Struktur checklist audit berhasil disinkronkan',
+            data,
+        };
+    }
+    async getInspections() {
+        const data = await this.checklistService.getInspections();
+        return {
+            success: true,
+            data,
+        };
+    }
+    async submitInspection(payload) {
+        const data = await this.checklistService.saveInspection(payload);
+        return {
+            success: true,
+            message: 'Hasil inspeksi audit lapangan berhasil disimpan',
+            data,
         };
     }
 };
 exports.ChecklistController = ChecklistController;
 __decorate([
-    (0, common_1.Get)(),
+    (0, common_1.Get)('checklist'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get audit checklist categories and points' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], ChecklistController.prototype, "getStructure", null);
 __decorate([
-    (0, common_1.Post)('sync'),
+    (0, common_1.Post)('checklist/sync'),
+    (0, swagger_1.ApiOperation)({ summary: 'Sync and update audit checklist categories and points' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ChecklistController.prototype, "syncStructure", null);
+__decorate([
+    (0, common_1.Get)('inspections'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all submitted audit inspection records' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ChecklistController.prototype, "getInspections", null);
+__decorate([
+    (0, common_1.Post)('inspections'),
+    (0, swagger_1.ApiOperation)({ summary: 'Submit a new audit inspection with OK/NOK findings' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ChecklistController.prototype, "submitInspection", null);
 exports.ChecklistController = ChecklistController = __decorate([
-    (0, common_1.Controller)('audit/checklist'),
+    (0, common_1.Controller)('audit'),
+    (0, swagger_1.ApiTags)('audit'),
     __metadata("design:paramtypes", [checklist_service_1.ChecklistService])
 ], ChecklistController);
 //# sourceMappingURL=checklist.controller.js.map

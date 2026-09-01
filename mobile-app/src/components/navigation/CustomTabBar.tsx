@@ -22,7 +22,7 @@ const AUDITOR_TABS: Record<string, TabMeta> = {
   profile: { label: 'Profil', icon: 'person' },
 };
 
-export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
+export function CustomTabBar({ state, navigation }: any) {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');

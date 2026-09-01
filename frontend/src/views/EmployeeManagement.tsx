@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/common/PageHeader';
-import { DataTable, ColumnDef } from '@/components/common/DataTable';
+import { DataTable, dataTableHelper } from '@/components/common/DataTable';
 import { getApiUrl } from '@/lib/api';
 
 interface Employee {
@@ -13,6 +13,44 @@ interface Employee {
   email: string;
   join_date?: string;
 }
+
+const column = dataTableHelper<Employee>();
+
+const columns = column.columns([
+  column.accessor('hris_user_id', {
+    header: 'ID (HRIS)',
+    cell: ({ getValue }) => (
+      <span className="font-mono text-xs text-slate-500 font-semibold">{getValue()}</span>
+    ),
+  }),
+  column.accessor('full_name', {
+    header: 'Nama Karyawan',
+    cell: ({ getValue }) => <span className="font-bold text-slate-800">{getValue()}</span>,
+  }),
+  column.accessor('email', {
+    header: 'Email',
+    enableSorting: false,
+    cell: ({ getValue }) => <span className="text-slate-600">{getValue() || '-'}</span>,
+  }),
+  column.accessor('join_date', {
+    header: 'Tanggal Bergabung',
+    sortFn: 'datetime',
+    cell: ({ getValue }) => {
+      const value = getValue();
+      return (
+        <span className="text-slate-500 text-xs">
+          {value
+            ? new Date(value).toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })
+            : '-'}
+        </span>
+      );
+    },
+  }),
+]);
 
 export const EmployeeManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -45,46 +83,6 @@ export const EmployeeManagement: React.FC = () => {
       alert(err.message || 'Tidak dapat terhubung ke Backend NestJS atau Server HRIS.');
     },
   });
-
-  const columns: ColumnDef<Employee>[] = [
-    {
-      key: 'hris_user_id',
-      header: 'ID (HRIS)',
-      sortable: true,
-      render: (row) => (
-        <span className="font-mono text-xs text-slate-500 font-semibold">
-          {row.hris_user_id}
-        </span>
-      ),
-    },
-    {
-      key: 'full_name',
-      header: 'Nama Karyawan',
-      sortable: true,
-      render: (row) => <span className="font-bold text-slate-800">{row.full_name}</span>,
-    },
-    {
-      key: 'email',
-      header: 'Email',
-      render: (row) => <span className="text-slate-600">{row.email || '-'}</span>,
-    },
-    {
-      key: 'join_date',
-      header: 'Tanggal Bergabung',
-      sortable: true,
-      render: (row) => (
-        <span className="text-slate-500 text-xs">
-          {row.join_date
-            ? new Date(row.join_date).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })
-            : '-'}
-        </span>
-      ),
-    },
-  ];
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">

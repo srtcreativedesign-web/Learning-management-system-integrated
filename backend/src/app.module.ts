@@ -9,9 +9,20 @@ import { SyncModule } from './sync/sync.module';
 import { SopModule } from './sop/sop.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { InHouseModule } from './in-house/in-house.module';
+import { TrainingReportModule } from './training-report/training-report.module';
 
 @Module({
-  imports: [PrismaModule, LmsModule, AuditModule, AuthModule, SyncModule, SopModule, GamificationModule, InHouseModule],
+  imports: [
+    PrismaModule,
+    LmsModule,
+    AuditModule,
+    AuthModule,
+    SyncModule,
+    SopModule,
+    GamificationModule,
+    InHouseModule,
+    TrainingReportModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

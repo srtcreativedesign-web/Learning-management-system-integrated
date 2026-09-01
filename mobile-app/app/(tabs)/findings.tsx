@@ -427,56 +427,166 @@ export default function FindingsScreen() {
               style={{
                 flexDirection: 'row',
                 gap: 12,
-                backgroundColor: COLORS.warningLight,
+                backgroundColor: COLORS.dangerLight,
                 borderRadius: RADIUS.lg,
                 padding: 16,
+                borderWidth: 1,
+                borderColor: 'rgba(220, 38, 38, 0.2)',
               }}
             >
-              <MaterialIcons name="warning-amber" size={22} color={COLORS.warningDeep} />
+              <MaterialIcons name="security" size={22} color={COLORS.danger} />
               <View style={{ flex: 1 }}>
-                <Text style={{ ...TYPE.h3, fontSize: 14, color: COLORS.warningDeep }}>Perhatian Khusus</Text>
-                <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.warningDeep, marginTop: 4, lineHeight: 19 }}>
-                  Temuan berulang menandakan ketidakpatuhan sistemik yang perlu di-escalate ke Store Manager.
+                <Text style={{ ...TYPE.h3, fontSize: 14, color: COLORS.danger }}>Temuan Berulang (≥2x di Outlet yang Sama)</Text>
+                <Text style={{ ...TYPE.body, fontSize: 12.5, color: COLORS.textSecondary, marginTop: 4, lineHeight: 18 }}>
+                  Hanya menampilkan butir checklist yang tercatat tidak sesuai (NOK) sebanyak 2 kali atau lebih pada outlet yang sama.
                 </Text>
               </View>
             </View>
 
-            <Card padded={false} style={{ overflow: 'hidden' }}>
-              <View style={{ paddingHorizontal: 16, paddingVertical: 15 }}>
-                <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain, lineHeight: 20 }}>
-                  SOP tidak dipasang di area kasir & kitchen
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 }}>
-                  <MaterialIcons name="storefront" size={14} color={COLORS.textSecondary} />
-                  <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary }}>
-                    Ditemukan di 3 outlet berbeda
+            {[
+              {
+                outlet: 'Outlet Sudirman',
+                title: 'Alat Pemadam Api Ringan (APAR) kedaluwarsa atau tekanan drop',
+                category: 'K3 & KESELAMATAN',
+                repeat_count: 2,
+                severity: 'KRITIS',
+                historyDates: ['5 Juli 2026', '12 Mei 2026'],
+                notes: 'Masa berlaku habis sejak Juni 2026, belum ditukar dari temuan Mei lalu.',
+              },
+              {
+                outlet: 'Outlet Kemang',
+                title: 'Suhu Chiller & Freezer penyimpanan di luar toleransi standar SOP (> 4°C)',
+                category: 'HIGIENITAS & SANITASI',
+                repeat_count: 2,
+                severity: 'KRITIS',
+                historyDates: ['8 Juli 2026', '15 Juni 2026'],
+                notes: 'Suhu chiller 8°C saat siang. Masalah paking pintu berulang.',
+              },
+              {
+                outlet: 'Outlet Sudirman',
+                title: 'Jalur evakuasi dan pintu darurat terhalang tumpukan stok barang',
+                category: 'K3 & KESELAMATAN',
+                repeat_count: 2,
+                severity: 'MAJOR',
+                historyDates: ['5 Juli 2026', '18 April 2026'],
+                notes: 'Tumpukan kardus stok logistik menutupi akses pintu darurat.',
+              },
+              {
+                outlet: 'Outlet Kelapa Gading',
+                title: 'Karyawan tidak mengenakan atribut lengkap (Hairnet & Apron Bersih)',
+                category: 'HIGIENITAS & SANITASI',
+                repeat_count: 2,
+                severity: 'MAJOR',
+                historyDates: ['3 Juli 2026', '20 Mei 2026'],
+                notes: '2 barista tidak mengenakan hairnet saat jam sibuk.',
+              },
+            ].map((rf, rfIdx) => (
+              <Card key={rfIdx} padded={false} style={{ overflow: 'hidden' }}>
+                <View style={{ paddingHorizontal: 16, paddingVertical: 15 }}>
+                  {/* Outlet Header Badge */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        backgroundColor: COLORS.surfaceSunken,
+                        paddingHorizontal: 9,
+                        paddingVertical: 4.5,
+                        borderRadius: RADIUS.sm,
+                        borderWidth: 1,
+                        borderColor: COLORS.border,
+                      }}
+                    >
+                      <MaterialIcons name="storefront" size={13} color={COLORS.primary} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.textMain }}>
+                        {rf.outlet}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        backgroundColor: COLORS.dangerLight,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3.5,
+                        borderRadius: RADIUS.pill,
+                        borderWidth: 1,
+                        borderColor: 'rgba(220, 38, 38, 0.25)',
+                      }}
+                    >
+                      <Text style={{ ...TYPE.micro, fontSize: 10, color: COLORS.danger, fontWeight: '800' }}>
+                        {rf.repeat_count}x BERULANG
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={{ ...TYPE.h3, fontSize: 14.5, color: COLORS.textMain, lineHeight: 20 }}>
+                    {rf.title}
                   </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: 13,
-                    paddingTop: 12,
-                    borderTopWidth: 1,
-                    borderTopColor: COLORS.divider,
-                  }}
-                >
-                  <Text style={{ ...TYPE.label, color: COLORS.danger }}>5x dalam 30 hari</Text>
+
+                  {/* History of Occurrences in this Outlet */}
+                  <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.divider }}>
+                    <Text style={{ ...TYPE.micro, color: COLORS.textMuted, marginBottom: 4 }}>
+                      RIWAYAT TEMUAN DI OUTLET INI:
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {rf.historyDates.map((dt, dIdx) => (
+                        <View
+                          key={dIdx}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 3,
+                            backgroundColor: COLORS.dangerLight,
+                            paddingHorizontal: 7,
+                            paddingVertical: 3,
+                            borderRadius: RADIUS.sm,
+                          }}
+                        >
+                          <MaterialIcons name="event" size={12} color={COLORS.danger} />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.danger }}>
+                            Inspeksi #{rf.historyDates.length - dIdx}: {dt}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Note */}
+                  {rf.notes && (
+                    <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8, fontStyle: 'italic' }}>
+                      Catatan: {rf.notes}
+                    </Text>
+                  )}
+
                   <View
                     style={{
-                      backgroundColor: COLORS.surfaceSunken,
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      borderRadius: RADIUS.pill,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: 12,
+                      paddingTop: 10,
+                      borderTopWidth: 1,
+                      borderTopColor: COLORS.divider,
                     }}
                   >
-                    <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>OPERASIONAL</Text>
+                    <Text style={{ ...TYPE.micro, color: COLORS.danger, fontWeight: '800' }}>
+                      {rf.severity}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: COLORS.surfaceSunken,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: RADIUS.pill,
+                      }}
+                    >
+                      <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>{rf.category}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </Card>
+              </Card>
+            ))}
           </View>
         )}
       </ScrollView>

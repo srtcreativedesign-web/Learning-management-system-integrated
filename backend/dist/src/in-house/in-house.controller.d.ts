@@ -9,8 +9,8 @@ export declare class InHouseController {
                 id: string;
                 description: string | null;
                 sort_order: number;
-                category_id: string;
                 question: string;
+                category_id: string;
                 max_score: number;
             }[];
         } & {
@@ -29,8 +29,8 @@ export declare class InHouseController {
                 id: string;
                 description: string | null;
                 sort_order: number;
-                category_id: string;
                 question: string;
+                category_id: string;
                 max_score: number;
             }[];
         } & {
@@ -53,8 +53,8 @@ export declare class InHouseController {
                     id: string;
                     description: string | null;
                     sort_order: number;
-                    category_id: string;
                     question: string;
+                    category_id: string;
                     max_score: number;
                 };
             } & {
@@ -99,8 +99,8 @@ export declare class InHouseController {
                     id: string;
                     description: string | null;
                     sort_order: number;
-                    category_id: string;
                     question: string;
+                    category_id: string;
                     max_score: number;
                 };
             } & {
@@ -151,8 +151,8 @@ export declare class InHouseController {
                     id: string;
                     description: string | null;
                     sort_order: number;
-                    category_id: string;
                     question: string;
+                    category_id: string;
                     max_score: number;
                 };
             } & {
