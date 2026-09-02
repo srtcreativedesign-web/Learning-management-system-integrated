@@ -22,14 +22,21 @@ const AUDITOR_TABS: Record<string, TabMeta> = {
   profile: { label: 'Profil', icon: 'person' },
 };
 
+const MANAGER_TABS: Record<string, TabMeta> = {
+  home: { label: 'Ringkasan', icon: 'insights' },
+  outlets: { label: 'Outlet', icon: 'storefront' },
+  findings: { label: 'Audit & SOP', icon: 'menu-book' },
+  profile: { label: 'Profil', icon: 'person' },
+};
+
 export function CustomTabBar({ state, navigation }: any) {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
-  const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');
-  const tabs = isTrainer ? TRAINER_TABS : AUDITOR_TABS;
+  const isManager = user?.role?.toUpperCase().includes('HRBP') || user?.role?.toUpperCase().includes('MANAGER') || user?.email?.includes('manager');
+  const isTrainer = !isManager && (user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer'));
+  const tabs = isManager ? MANAGER_TABS : isTrainer ? TRAINER_TABS : AUDITOR_TABS;
 
-  // The FAB used to open an Alert listing actions that weren't tappable.
-  // It now performs the primary action directly: go to the outlet list.
+  // The FAB performs the primary action: navigate to the outlet list.
   const goToPrimaryAction = useCallback(() => {
     navigation.navigate('outlets' as never);
   }, [navigation]);

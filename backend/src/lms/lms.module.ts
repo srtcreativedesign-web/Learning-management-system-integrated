@@ -5,6 +5,7 @@ import { QuizController } from './quiz.controller';
 import { QuizService } from './quiz.service';
 import { CertificateTemplateController } from './certificate-template.controller';
 import { CertificateTemplateService } from './certificate-template.service';
+import { CertificatePdfService } from './certificate-pdf.service';
 import { KnowledgeHubController } from './knowledge-hub.controller';
 import { AiService } from './ai.service';
 
@@ -15,6 +16,12 @@ import { AiService } from './ai.service';
     CertificateTemplateController,
     KnowledgeHubController
   ],
-  providers: [CourseService, QuizService, CertificateTemplateService, AiService]
+  providers: [
+    CourseService,
+    QuizService,
+    CertificateTemplateService,
+    CertificatePdfService,
+    AiService,
+  ]
 })
 export class LmsModule {}

@@ -20,6 +20,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       const res = await loginApi(email, password);
+      const role = (res.user?.role || '').toUpperCase();
+      if (role === 'SUPER_ADMIN' || role.includes('SUPER_ADMIN') || role === 'ADMIN') {
+        throw new Error('Akun Super Admin hanya dapat diakses melalui Web Dashboard.');
+      }
       setToken(res.access_token);
       setUser(res.user);
     } finally {

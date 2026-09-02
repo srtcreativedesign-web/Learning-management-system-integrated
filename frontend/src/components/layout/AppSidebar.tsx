@@ -45,6 +45,7 @@ export const AppSidebar: React.FC = () => {
     audit: true,
     gamification: true,
     sop: true,
+    certificates: true,
   });
 
   const toggleSection = (key: string) => {
@@ -326,6 +327,57 @@ export const AppSidebar: React.FC = () => {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton asChild isActive={isPathActive('/analytics/quiz-history')}>
                           <NavLink to="/analytics/quiz-history">Riwayat Kuis Peserta</NavLink>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    </SidebarMenuSub>
+                  )}
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Certificates Group (Trainer, Super Admin, HRBP) */}
+        {hasTrainingAccess && (
+          <SidebarGroup className="group-data-[collapsible=icon]:p-0">
+            <SidebarGroupLabel className="text-[10px] font-bold tracking-wider uppercase text-slate-400 px-2 group-data-[collapsible=icon]:hidden">
+              Sertifikasi & Kelulusan
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => toggleSection('certificates')}
+                    tooltip="Sertifikat"
+                    className="font-medium text-xs px-2.5 py-2 rounded-lg text-slate-700 hover:bg-slate-100 flex items-center justify-between transition-colors duration-150 overflow-hidden"
+                  >
+                    <Award className="w-4 h-4 text-[#0F4F68] shrink-0" />
+                    <span className="truncate group-data-[collapsible=icon]:hidden flex-1 text-left">
+                      Sertifikat Kelulusan
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-data-[collapsible=icon]:hidden shrink-0',
+                        expandedSections.certificates ? 'rotate-0' : '-rotate-90'
+                      )}
+                    />
+                  </SidebarMenuButton>
+
+                  {expandedSections.certificates && (
+                    <SidebarMenuSub className="ml-4 border-l border-slate-200 pl-2 space-y-1 pt-1 group-data-[collapsible=icon]:hidden">
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={isPathActive('/certificates/templates')}>
+                          <NavLink to="/certificates/templates">Desain Template</NavLink>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={isPathActive('/certificates/issued')}>
+                          <NavLink to="/certificates/issued">Sertifikat Terbit</NavLink>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton asChild isActive={isPathActive('/certificates/mine')}>
+                          <NavLink to="/certificates/mine">Sertifikat Saya</NavLink>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>

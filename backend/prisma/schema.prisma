@@ -124,13 +124,16 @@ model QuizOption {
 
 // Template Sertifikat
 model CertificateTemplate {
-  id              String @id @default(uuid())
+  id              String  @id @default(uuid())
   name            String
-  bg_image_url    String // Latar belakang sertifikat
-  name_pos_x      Float // Koordinat X untuk nama peserta
-  name_pos_y      Float // Koordinat Y untuk nama peserta
-  name_font_size  Int    @default(32)
-  name_font_color String @default("#000000")
+  bg_image_url    String  @default("theme:classic-navy") // Latar belakang sertifikat
+  name_pos_x      Float   @default(50) // Koordinat X untuk nama peserta
+  name_pos_y      Float   @default(45) // Koordinat Y untuk nama peserta
+  name_font_size  Int     @default(32)
+  name_font_color String  @default("#000000")
+
+  pdfme_template  Json?   // { basePdf, schemas } milik pdfme
+  base_pdf_url    String? // path file PDF latar di /uploads/certificates/
 
   Quizzes Quiz[]
 

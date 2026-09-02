@@ -24,7 +24,11 @@ interface OutletItem {
 
 export default function OutletsScreen() {
   const { user } = useAuth();
-  const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');
+  const isManager =
+    user?.role?.toUpperCase().includes('HRBP') ||
+    user?.role?.toUpperCase().includes('MANAGER') ||
+    user?.email?.includes('manager');
+  const isTrainer = !isManager && (user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer'));
   const [filter, setFilter] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [realOutlets, setRealOutlets] = useState<any[]>([]);
@@ -48,7 +52,54 @@ export default function OutletsScreen() {
     });
 
     // 2. Fetch Sessions / Inspections
-    if (isTrainer) {
+    if (isManager) {
+      const sessionsReq = fetchInHouseSessionsApi().then((sessions) => {
+        if (sessions && Array.isArray(sessions) && sessions.length > 0) {
+          const resultsMap: Record<string, { grade: 'SB' | 'B' | 'C' | 'K'; score: number; status: string; date?: string }> = {};
+          sessions.forEach((s: any) => {
+            const status = s.is_passed ? 'Lulus Sesi' : 'Perlu Re-Training';
+            const grade = (s.grade || 'B') as 'SB' | 'B' | 'C' | 'K';
+            const score = Math.round(s.percentage || s.total_score || 85);
+            const date = s.training_date
+              ? new Date(s.training_date).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : 'Selesai';
+
+            if (s.outlet_id) resultsMap[s.outlet_id] = { grade, score, status, date };
+            if (s.outlet?.name) resultsMap[s.outlet.name] = { grade, score, status, date };
+            if (s.outlet_name) resultsMap[s.outlet_name] = { grade, score, status, date };
+          });
+          setSessionResults((prev) => ({ ...resultsMap, ...prev }));
+        }
+      });
+
+      const auditReq = fetchAuditInspectionsApi().then((inspections) => {
+        if (inspections && Array.isArray(inspections) && inspections.length > 0) {
+          const resultsMap: Record<string, { score: number; status: string; isCompliant: boolean; date?: string }> = {};
+          inspections.forEach((a: any) => {
+            const isCompliant = a.is_compliant;
+            const status = isCompliant ? 'Compliant' : 'Non-Compliant';
+            const score = a.compliance_score || 85;
+            const date = a.inspection_date
+              ? new Date(a.inspection_date).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : 'Selesai';
+
+            if (a.outlet_id) resultsMap[a.outlet_id] = { score, status, isCompliant, date };
+            if (a.outlet_name) resultsMap[a.outlet_name] = { score, status, isCompliant, date };
+          });
+          setAuditResults((prev) => ({ ...resultsMap, ...prev }));
+        }
+      });
+
+      return Promise.all([outletsReq, sessionsReq, auditReq]).catch(() => undefined);
+    } else if (isTrainer) {
       const sessionsReq = fetchInHouseSessionsApi().then((sessions) => {
         if (sessions && Array.isArray(sessions) && sessions.length > 0) {
           const resultsMap: Record<string, { grade: 'SB' | 'B' | 'C' | 'K'; score: number; status: string; date?: string }> = {};
@@ -110,12 +161,12 @@ export default function OutletsScreen() {
 
   useEffect(() => {
     loadData();
-  }, [user, isTrainer]);
+  }, [user, isManager, isTrainer]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     loadData().finally(() => setIsRefreshing(false));
-  }, [user, isTrainer]);
+  }, [user, isManager, isTrainer]);
 
   // Default initial demo outlets (some pending, some evaluated)
   const defaultTrainerOutlets: OutletItem[] = [
@@ -200,6 +251,31 @@ export default function OutletsScreen() {
   };
 
   const handleStartActivity = (outlet: OutletItem) => {
+    if (isManager) {
+      Alert.alert(
+        `Aksi Supervisi: ${outlet.name}`,
+        'Pilih jenis inspeksi atau pendampingan yang ingin dijalankan di gerai ini:',
+        [
+          {
+            text: 'Inspeksi Audit (OK/NOK)',
+            onPress: () => {
+              setSelectedAuditOutlet(outlet);
+              setIsAuditInspectionOpen(true);
+            },
+          },
+          {
+            text: 'In-House Training (Asesmen)',
+            onPress: () => {
+              setSelectedTrainerOutlet(outlet);
+              setIsTrainerAssessmentOpen(true);
+            },
+          },
+          { text: 'Batal', style: 'cancel' },
+        ]
+      );
+      return;
+    }
+
     const isLocked = isOutletEvaluated(outlet);
 
     // If already evaluated, lock and show read-only result dialog
@@ -571,23 +647,23 @@ export default function OutletsScreen() {
         </View>
       </ScrollView>
 
-      {/* Trainer: In-House Training Assessment Modal */}
-      {isTrainer && (
+      {/* Trainer / Manager: In-House Training Assessment Modal */}
+      {(isTrainer || isManager) && (
         <InHouseAssessmentBottomSheet
           visible={isTrainerAssessmentOpen}
           outlet={selectedTrainerOutlet}
-          trainerName={user?.name || 'Trainer TnD'}
+          trainerName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Trainer TnD')}
           onClose={() => setIsTrainerAssessmentOpen(false)}
           onSuccess={handleTrainerSuccess}
         />
       )}
 
-      {/* Auditor: Field Audit Inspection (OK / NOK) Modal */}
-      {!isTrainer && (
+      {/* Auditor / Manager: Field Audit Inspection (OK / NOK) Modal */}
+      {(!isTrainer || isManager) && (
         <AuditInspectionBottomSheet
           visible={isAuditInspectionOpen}
           outlet={selectedAuditOutlet}
-          auditorName={user?.name || 'Auditor Lapangan'}
+          auditorName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Auditor Lapangan')}
           onClose={() => setIsAuditInspectionOpen(false)}
           onSuccess={handleAuditSuccess}
         />

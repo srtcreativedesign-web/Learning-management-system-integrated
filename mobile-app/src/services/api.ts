@@ -87,7 +87,11 @@ export async function loginApi(email: string, password?: string): Promise<LoginR
         email: cleanEmail,
         total_xp: 120,
         current_rank: 'Pembelajar Aktif',
-        role: cleanEmail.includes('trainer') ? 'Trainer TnD' : 'Auditor Lapangan',
+        role: cleanEmail.includes('trainer')
+          ? 'Trainer TnD'
+          : cleanEmail.includes('manager') || cleanEmail.includes('hrbp')
+          ? 'HRBP Manager'
+          : 'Auditor Lapangan',
       },
     };
   }

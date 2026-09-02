@@ -28,8 +28,14 @@ interface SopItem {
 
 export default function FindingsScreen() {
   const { user } = useAuth();
-  const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');
+  const isManager =
+    user?.role?.toUpperCase().includes('HRBP') ||
+    user?.role?.toUpperCase().includes('MANAGER') ||
+    user?.email?.includes('manager');
+  const isTrainer = !isManager && (user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer'));
   
+  // Manager Tab
+  const [managerTab, setManagerTab] = useState<'findings' | 'sop'>('findings');
   // Auditor Tabs
   const [auditTab, setAuditTab] = useState<'open' | 'recurring'>('open');
   // Trainer Tabs
@@ -146,7 +152,17 @@ export default function FindingsScreen() {
         }
       >
         <View style={{ marginTop: 20 }}>
-          {isTrainer ? (
+          {isManager ? (
+            <Segmented
+              onBrand
+              value={managerTab}
+              onChange={setManagerTab}
+              options={[
+                { value: 'findings', label: 'Temuan Audit (8)' },
+                { value: 'sop', label: `Pustaka SOP (${sops.length})` },
+              ]}
+            />
+          ) : isTrainer ? (
             <Segmented
               onBrand
               value={trainerTab}
@@ -184,8 +200,8 @@ export default function FindingsScreen() {
           />
         }
       >
-        {isTrainer ? (
-          /* ================= TRAINER VIEW ================= */
+        {isTrainer || (isManager && managerTab === 'sop') ? (
+          /* ================= TRAINER / MANAGER SOP VIEW ================= */
           trainerTab === 'modules' ? (
             <View style={{ gap: 12 }}>
               {/* Search */}

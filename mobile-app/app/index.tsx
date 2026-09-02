@@ -10,10 +10,9 @@ import { Button } from '../src/components/ui/Button';
 import { COLORS, RADIUS, SHADOW, TYPE } from '../src/theme';
 
 const DEMO_ACCOUNTS: { email: string; role: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-  { email: 'budi.trainer@sobathr.com', role: 'Trainer', icon: 'school' },
-  { email: 'dian.auditor@sobathr.com', role: 'Auditor', icon: 'assignment-turned-in' },
-  { email: 'admin@sobathr.com', role: 'Admin', icon: 'admin-panel-settings' },
-  { email: 'manager.hrbp@sobathr.com', role: 'HRBP', icon: 'business-center' },
+  { email: 'budi.trainer@sobathr.com', role: 'Trainer TnD', icon: 'school' },
+  { email: 'dian.auditor@sobathr.com', role: 'Auditor Lapangan', icon: 'assignment-turned-in' },
+  { email: 'manager.hrbp@sobathr.com', role: 'HRBP Manager', icon: 'business-center' },
 ];
 
 export default function LoginScreen() {

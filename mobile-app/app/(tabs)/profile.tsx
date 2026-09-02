@@ -13,9 +13,10 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
 
   const isTrainer = user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer');
-  const displayName = user?.name || (isTrainer ? 'Budi Santoso' : 'Dian Pratama');
-  const displayRole = isTrainer ? 'Trainer & Asesor TnD' : 'Auditor Lapangan';
-  const displayEmail = user?.email || (isTrainer ? 'budi.trainer@sobathr.com' : 'dian.auditor@sobathr.com');
+  const isManager = user?.role?.toUpperCase().includes('HRBP') || user?.role?.toUpperCase().includes('MANAGER') || user?.email?.includes('manager');
+  const displayName = user?.name || (isTrainer ? 'Budi Santoso' : isManager ? 'Rian HRBP' : 'Dian Pratama');
+  const displayRole = isTrainer ? 'Trainer & Asesor TnD' : isManager ? 'HRBP Manager' : 'Auditor Lapangan';
+  const displayEmail = user?.email || (isTrainer ? 'budi.trainer@sobathr.com' : isManager ? 'manager.hrbp@sobathr.com' : 'dian.auditor@sobathr.com');
 
   const handleLogout = () => {
     Alert.alert('Konfirmasi Keluar', 'Apakah Anda yakin ingin keluar dari akun ini?', [

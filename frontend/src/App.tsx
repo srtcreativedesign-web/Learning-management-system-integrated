@@ -21,6 +21,9 @@ import { TrainingAnalytics } from '@/views/analytics/TrainingAnalytics';
 import { AuditAnalytics } from '@/views/analytics/AuditAnalytics';
 import { SopViewer } from '@/views/sop/SopViewer';
 import { SopManagement } from '@/views/sop/SopManagement';
+import { CertificateTemplatesView } from '@/views/certificates/CertificateTemplatesView';
+import { IssuedCertificatesView } from '@/views/certificates/IssuedCertificatesView';
+import { MyCertificatesView } from '@/views/MyCertificatesView';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
@@ -90,6 +93,15 @@ export const App: React.FC = () => {
               <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HRBP_MANAGER']} />}>
                 <Route path="/sop/management" element={<SopManagement />} />
               </Route>
+
+              {/* Certificates (Super Admin, HRBP, Trainer) */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HRBP_MANAGER', 'TRAINER']} />}>
+                <Route path="/certificates/templates" element={<CertificateTemplatesView />} />
+                <Route path="/certificates/issued" element={<IssuedCertificatesView />} />
+              </Route>
+
+              {/* My Certificates (All Authenticated Roles) */}
+              <Route path="/certificates/mine" element={<MyCertificatesView />} />
             </Route>
 
             {/* Fallback */}

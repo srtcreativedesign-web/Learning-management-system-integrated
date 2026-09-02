@@ -14,6 +14,7 @@ const quiz_controller_1 = require("./quiz.controller");
 const quiz_service_1 = require("./quiz.service");
 const certificate_template_controller_1 = require("./certificate-template.controller");
 const certificate_template_service_1 = require("./certificate-template.service");
+const certificate_pdf_service_1 = require("./certificate-pdf.service");
 const knowledge_hub_controller_1 = require("./knowledge-hub.controller");
 const ai_service_1 = require("./ai.service");
 let LmsModule = class LmsModule {
@@ -27,7 +28,13 @@ exports.LmsModule = LmsModule = __decorate([
             certificate_template_controller_1.CertificateTemplateController,
             knowledge_hub_controller_1.KnowledgeHubController
         ],
-        providers: [course_service_1.CourseService, quiz_service_1.QuizService, certificate_template_service_1.CertificateTemplateService, ai_service_1.AiService]
+        providers: [
+            course_service_1.CourseService,
+            quiz_service_1.QuizService,
+            certificate_template_service_1.CertificateTemplateService,
+            certificate_pdf_service_1.CertificatePdfService,
+            ai_service_1.AiService,
+        ]
     })
 ], LmsModule);
 //# sourceMappingURL=lms.module.js.map

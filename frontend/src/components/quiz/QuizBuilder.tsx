@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { PlusCircle, Trash2, CheckCircle2, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle, Trash2, CheckCircle2, Save, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { DynamicInputList, OptionItem } from '@/components/ui/DynamicInputList';
+import { getApiUrl } from '@/lib/api';
 
 interface Question {
   id: string;
@@ -18,6 +19,14 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 export const QuizBuilder: React.FC = () => {
   const [passingScore, setPassingScore] = useState(80);
   const [certificateTemplateId, setCertificateTemplateId] = useState('');
+  const [availableTemplates, setAvailableTemplates] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    fetch(getApiUrl('/certificate-templates'))
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setAvailableTemplates(data))
+      .catch(() => {});
+  }, []);
 
   const [questions, setQuestions] = useState<Question[]>([
     {
@@ -116,7 +125,11 @@ export const QuizBuilder: React.FC = () => {
               className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-xs focus:outline-hidden focus:ring-1 focus:ring-[#419CC3]"
             >
               <option value="">Tidak ada sertifikat</option>
-              <option value="template-1">Sertifikat Kelulusan Standar</option>
+              {availableTemplates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
             </select>
           </div>
         </CardContent>
