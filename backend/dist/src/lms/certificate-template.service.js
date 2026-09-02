@@ -21,7 +21,9 @@ let CertificateTemplateService = class CertificateTemplateService {
         return this.prisma.certificateTemplate.create({
             data: {
                 name: data.name,
-                bg_image_url: data.bg_image_url || 'theme:classic-blue',
+                bg_image_url: data.bg_image_url || 'theme:classic-navy',
+                base_pdf_url: data.base_pdf_url || null,
+                pdfme_template: data.pdfme_template || null,
                 name_pos_x: Number(data.name_pos_x ?? 50),
                 name_pos_y: Number(data.name_pos_y ?? 45),
                 name_font_size: Number(data.name_font_size ?? 32),
@@ -80,6 +82,8 @@ let CertificateTemplateService = class CertificateTemplateService {
             data: {
                 ...(data.name && { name: data.name }),
                 ...(data.bg_image_url && { bg_image_url: data.bg_image_url }),
+                ...(data.base_pdf_url !== undefined && { base_pdf_url: data.base_pdf_url }),
+                ...(data.pdfme_template !== undefined && { pdfme_template: data.pdfme_template }),
                 ...(data.name_pos_x !== undefined && { name_pos_x: Number(data.name_pos_x) }),
                 ...(data.name_pos_y !== undefined && { name_pos_y: Number(data.name_pos_y) }),
                 ...(data.name_font_size !== undefined && { name_font_size: Number(data.name_font_size) }),
@@ -217,6 +221,27 @@ let CertificateTemplateService = class CertificateTemplateService {
     async getUserCertificates(userId) {
         const all = await this.getIssuedCertificates();
         return all.filter((c) => c.user_id === userId);
+    }
+    async getUserCertificatesContract(hrisUserId) {
+        const userShadow = await this.prisma.userShadow.findFirst({
+            where: {
+                OR: [{ hris_user_id: String(hrisUserId) }, { id: String(hrisUserId) }],
+            },
+        });
+        if (!userShadow) {
+            return { data: [] };
+        }
+        const all = await this.getIssuedCertificates();
+        const userCerts = all.filter((c) => c.user_id === userShadow.id);
+        const data = userCerts.map((cert) => ({
+            id: cert.id,
+            certificate_number: cert.certificate_number,
+            course_title: cert.course_title,
+            score: cert.score,
+            completed_at: new Date(cert.issue_date).toISOString(),
+            file_url: `/certificate-templates/issued/${cert.id}/pdf`,
+        }));
+        return { data };
     }
 };
 exports.CertificateTemplateService = CertificateTemplateService;

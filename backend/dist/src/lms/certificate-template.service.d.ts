@@ -4,9 +4,11 @@ export declare class CertificateTemplateService {
     constructor(prisma: PrismaClient);
     createTemplate(data: {
         name: string;
-        bg_image_url: string;
-        name_pos_x: number;
-        name_pos_y: number;
+        bg_image_url?: string;
+        base_pdf_url?: string;
+        pdfme_template?: any;
+        name_pos_x?: number;
+        name_pos_y?: number;
         name_font_size?: number;
         name_font_color?: string;
     }): Promise<{
@@ -73,6 +75,8 @@ export declare class CertificateTemplateService {
     updateTemplate(id: string, data: {
         name?: string;
         bg_image_url?: string;
+        base_pdf_url?: string;
+        pdfme_template?: any;
         name_pos_x?: number;
         name_pos_y?: number;
         name_font_size?: number;
@@ -108,4 +112,7 @@ export declare class CertificateTemplateService {
         verification_timestamp: string;
     }>;
     getUserCertificates(userId: string): Promise<any>;
+    getUserCertificatesContract(hrisUserId: string): Promise<{
+        data: any;
+    }>;
 }

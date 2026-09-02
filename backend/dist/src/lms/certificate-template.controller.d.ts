@@ -4,6 +4,18 @@ export declare class CertificateTemplateController {
     private readonly certificateTemplateService;
     private readonly certificatePdfService;
     constructor(certificateTemplateService: CertificateTemplateService, certificatePdfService: CertificatePdfService);
+    uploadBackground(file: any): Promise<{
+        success: boolean;
+        url: string;
+        fileName: any;
+        mimeType: any;
+    }>;
+    uploadSignature(file: any): Promise<{
+        success: boolean;
+        url: string;
+        fileName: any;
+        mimeType: any;
+    }>;
     createTemplate(data: any): Promise<{
         id: string;
         name: string;

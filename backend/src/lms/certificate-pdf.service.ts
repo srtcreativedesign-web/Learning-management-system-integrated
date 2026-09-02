@@ -173,6 +173,11 @@ export class CertificatePdfService {
       year: 'numeric',
     });
 
+    const signer1Name = templateInDb?.signer1_name || 'Rian Hidayat, S.Psi';
+    const signer1Role = templateInDb?.signer1_role || 'Head of TnD & Academy';
+    const signer2Name = templateInDb?.signer2_name || 'Hendri Wijaya, B.Bus';
+    const signer2Role = templateInDb?.signer2_role || 'Operations Director';
+
     const inputs = [
       {
         header_instansi: 'PT SOBAT KULINER INDONESIA — TND ACADEMY',
@@ -184,8 +189,8 @@ export class CertificatePdfService {
         modul: `“${cert.course_title}”`,
         nilai: `Hasil Evaluasi: LULUS (Skor ${cert.score}%)`,
         tanggal: `Jakarta, ${formattedDate}`,
-        pengesah_1: 'Rian Hidayat, S.Psi\nHead of TnD & Academy',
-        pengesah_2: 'Hendri Wijaya, B.Bus\nOperations Director',
+        pengesah_1: `${signer1Name}\n${signer1Role}`,
+        pengesah_2: `${signer2Name}\n${signer2Role}`,
       },
     ];
 

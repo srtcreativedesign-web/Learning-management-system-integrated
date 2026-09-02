@@ -7,7 +7,13 @@ import {
   Post,
   Put,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import * as fs from 'fs';
 import { CertificateTemplateService } from './certificate-template.service';
 import { CertificatePdfService } from './certificate-pdf.service';
 
@@ -17,6 +23,60 @@ export class CertificateTemplateController {
     private readonly certificateTemplateService: CertificateTemplateService,
     private readonly certificatePdfService: CertificatePdfService
   ) {}
+
+  @Post('upload-bg')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/certificates';
+          if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, 'bg-' + uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    })
+  )
+  async uploadBackground(@UploadedFile() file: any) {
+    return {
+      success: true,
+      url: `/uploads/certificates/${file.filename}`,
+      fileName: file.originalname,
+      mimeType: file.mimetype,
+    };
+  }
+
+  @Post('upload-signature')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/certificates/signatures';
+          if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, 'sig-' + uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    })
+  )
+  async uploadSignature(@UploadedFile() file: any) {
+    return {
+      success: true,
+      url: `/uploads/certificates/signatures/${file.filename}`,
+      fileName: file.originalname,
+      mimeType: file.mimetype,
+    };
+  }
 
   @Post()
   async createTemplate(@Body() data: any) {

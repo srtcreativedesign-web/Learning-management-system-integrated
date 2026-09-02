@@ -13,6 +13,7 @@ const course_service_1 = require("./course.service");
 const quiz_controller_1 = require("./quiz.controller");
 const quiz_service_1 = require("./quiz.service");
 const certificate_template_controller_1 = require("./certificate-template.controller");
+const certificates_api_controller_1 = require("./certificates-api.controller");
 const certificate_template_service_1 = require("./certificate-template.service");
 const certificate_pdf_service_1 = require("./certificate-pdf.service");
 const knowledge_hub_controller_1 = require("./knowledge-hub.controller");
@@ -26,6 +27,7 @@ exports.LmsModule = LmsModule = __decorate([
             course_controller_1.CourseController,
             quiz_controller_1.QuizController,
             certificate_template_controller_1.CertificateTemplateController,
+            certificates_api_controller_1.CertificatesApiController,
             knowledge_hub_controller_1.KnowledgeHubController
         ],
         providers: [

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Award, ShieldCheck } from 'lucide-react';
 import logoTnd from '@/assets/logo tnd.png';
+import { API_BASE_URL } from '@/lib/api';
 
 export interface CertificateData {
   certificateNumber?: string;
@@ -9,14 +10,96 @@ export interface CertificateData {
   score?: number;
   issueDate?: string;
   divisionName?: string;
-  trainerOrIssuerName?: string;
   template?: {
     name?: string;
     bg_image_url?: string;
+    base_pdf_url?: string;
+    pdfme_template?: any;
+
+    // 1. Judul Sertifikat (Title)
+    show_title?: boolean;
+    title_text?: string;
+    title_subtext?: string;
+    title_pos_x?: number;
+    title_pos_y?: number;
+    title_font_size?: number;
+    title_font_color?: string;
+    title_font_family?: string;
+
+    // 2. Teks Pengantar (Intro)
+    show_intro?: boolean;
+    intro_text?: string;
+    intro_pos_x?: number;
+    intro_pos_y?: number;
+    intro_font_size?: number;
+    intro_font_color?: string;
+    intro_font_family?: string;
+
+    // 3. Nama Peserta
     name_pos_x?: number;
     name_pos_y?: number;
     name_font_size?: number;
     name_font_color?: string;
+    name_font_family?: string;
+    name_align?: 'center' | 'left' | 'right';
+
+    // 4. Nomor Sertifikat
+    show_cert_no?: boolean;
+    cert_no_pos_x?: number;
+    cert_no_pos_y?: number;
+    cert_no_font_size?: number;
+    cert_no_font_color?: string;
+
+    // 5. Modul / Deskripsi
+    show_course?: boolean;
+    course_pos_x?: number;
+    course_pos_y?: number;
+    course_font_size?: number;
+    course_font_color?: string;
+    course_custom_text?: string;
+
+    // 6. Tanggal Terbit
+    show_date?: boolean;
+    date_pos_x?: number;
+    date_pos_y?: number;
+    date_font_size?: number;
+    date_font_color?: string;
+
+    // 7. Instansi / Header Logo
+    show_header_logo?: boolean;
+    header_logo_pos_x?: number;
+    header_logo_pos_y?: number;
+
+    // 8. Tanda Tangan 1 (Kiri)
+    show_signer1?: boolean;
+    signer1_role?: string;
+    signer1_name?: string;
+    signer1_signature_url?: string;
+    signer1_pos_x?: number;
+    signer1_pos_y?: number;
+    signer1_font_color?: string;
+
+    // 9. Tanda Tangan 2 (Kanan)
+    show_signer2?: boolean;
+    signer2_role?: string;
+    signer2_name?: string;
+    signer2_signature_url?: string;
+    signer2_pos_x?: number;
+    signer2_pos_y?: number;
+    signer2_font_color?: string;
+
+    // 10. QR & Seal
+    show_qr?: boolean;
+    qr_pos_x?: number;
+    qr_pos_y?: number;
+    qr_size?: number;
+
+    show_seal?: boolean;
+    seal_pos_x?: number;
+    seal_pos_y?: number;
+    seal_size?: number;
+
+    show_border?: boolean;
   };
 }
 
@@ -24,17 +107,21 @@ interface CertificateCanvasProps {
   data: CertificateData;
   scale?: number;
   showBorder?: boolean;
+  interactiveSelection?: string | null;
+  onSelectElement?: (elementKey: string) => void;
 }
 
 export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   data,
   scale = 1,
-  showBorder = true,
+  showBorder: propShowBorder,
+  interactiveSelection,
+  onSelectElement,
 }) => {
   const {
     certificateNumber = 'CERT/TND/2026/07/A89B4C',
     recipientName = 'Budi Santoso',
-    courseTitle = 'Standar Operasional Prosedur Barista & Kalibrasi Mesin Espresso',
+    courseTitle = 'Standar Operasional Prosedur Barista & Pelayanan Pelanggan',
     score = 95,
     issueDate = new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -42,21 +129,107 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
       year: 'numeric',
     }),
     divisionName = 'Divisi Operasional & Barista',
-    trainerOrIssuerName = 'Rian Hidayat, S.Psi (HRBP & Head of TnD)',
     template,
   } = data;
 
   const theme = template?.bg_image_url || 'theme:classic-navy';
-  const nameX = template?.name_pos_x ?? 50;
-  const nameY = template?.name_pos_y ?? 46;
-  const nameFontSize = template?.name_font_size ?? 34;
-  const nameFontColor = template?.name_font_color || '#0F4F68';
+  const customBgUrl =
+    template?.base_pdf_url ||
+    (theme.startsWith('/uploads') || theme.startsWith('http') ? theme : null);
+
+  // Metadata parser
+  const meta = (template?.pdfme_template as any) || {};
+
+  // 1. Judul Sertifikat (Title)
+  const showTitle = template?.show_title ?? meta.show_title ?? true;
+  const titleText = template?.title_text ?? meta.title_text ?? 'SERTIFIKAT KELULUSAN';
+  const titleSubtext = template?.title_subtext ?? meta.title_subtext ?? 'Certificate of Completion & Excellence';
+  const titleX = template?.title_pos_x ?? meta.title_pos_x ?? 50;
+  const titleY = template?.title_pos_y ?? meta.title_pos_y ?? (customBgUrl ? 22 : 22);
+  const titleSize = template?.title_font_size ?? meta.title_font_size ?? (customBgUrl ? 24 : 24);
+  const titleColor = template?.title_font_color ?? meta.title_font_color ?? (customBgUrl ? '#0F4F68' : '#0F4F68');
+  const titleFontFamily = template?.title_font_family ?? meta.title_font_family ?? 'sans';
+
+  // 2. Teks Pengantar (Intro)
+  const showIntro = template?.show_intro ?? meta.show_intro ?? true;
+  const introText = template?.intro_text ?? meta.intro_text ?? 'Diberikan dengan hormat dan apresiasi setinggi-tingginya kepada:';
+  const introX = template?.intro_pos_x ?? meta.intro_pos_x ?? 50;
+  const introY = template?.intro_pos_y ?? meta.intro_pos_y ?? (customBgUrl ? 33 : 34);
+  const introSize = template?.intro_font_size ?? meta.intro_font_size ?? 12;
+  const introColor = template?.intro_font_color ?? meta.intro_font_color ?? '#64748b';
+
+  // 3. Nama Peserta
+  const nameX = template?.name_pos_x ?? meta.name_pos_x ?? 50;
+  const nameY = template?.name_pos_y ?? meta.name_pos_y ?? (customBgUrl ? 44 : 46);
+  const nameFontSize = template?.name_font_size ?? meta.name_font_size ?? (customBgUrl ? 36 : 34);
+  const nameFontColor = template?.name_font_color ?? meta.name_font_color ?? (customBgUrl ? '#1e293b' : '#0F4F68');
+  const nameFontFamily = template?.name_font_family ?? meta.name_font_family ?? 'serif';
+  const nameAlign = template?.name_align ?? meta.name_align ?? 'center';
+
+  // 4. Nomor Sertifikat
+  const showCertNo = template?.show_cert_no ?? meta.show_cert_no ?? true;
+  const certNoX = template?.cert_no_pos_x ?? meta.cert_no_pos_x ?? (customBgUrl ? 82 : 85);
+  const certNoY = template?.cert_no_pos_y ?? meta.cert_no_pos_y ?? (customBgUrl ? 11 : 12);
+  const certNoSize = template?.cert_no_font_size ?? meta.cert_no_font_size ?? 10.5;
+  const certNoColor = template?.cert_no_font_color ?? meta.cert_no_font_color ?? '#64748b';
+
+  // 5. Modul / Deskripsi
+  const showCourse = template?.show_course ?? meta.show_course ?? true;
+  const courseX = template?.course_pos_x ?? meta.course_pos_x ?? 50;
+  const courseY = template?.course_pos_y ?? meta.course_pos_y ?? (customBgUrl ? 58 : 60);
+  const courseSize = template?.course_font_size ?? meta.course_font_size ?? (customBgUrl ? 14 : 13.5);
+  const courseColor = template?.course_font_color ?? meta.course_font_color ?? '#1e293b';
+  const courseCustomText = template?.course_custom_text ?? meta.course_custom_text ?? `Telah berhasil menyelesaikan dan lulus uji kompetensi kuis dengan nilai (${score}%) pada modul “${courseTitle}”`;
+
+  // 6. Tanggal Terbit
+  const showDate = template?.show_date ?? meta.show_date ?? true;
+  const dateX = template?.date_pos_x ?? meta.date_pos_x ?? (customBgUrl ? 50 : 20);
+  const dateY = template?.date_pos_y ?? meta.date_pos_y ?? (customBgUrl ? 70 : 82);
+  const dateSize = template?.date_font_size ?? meta.date_font_size ?? 11;
+  const dateColor = template?.date_font_color ?? meta.date_font_color ?? '#475569';
+
+  // 7. Header Logo
+  const showHeaderLogo = template?.show_header_logo ?? meta.show_header_logo ?? (customBgUrl ? false : true);
+  const headerLogoX = template?.header_logo_pos_x ?? meta.header_logo_pos_x ?? 18;
+  const headerLogoY = template?.header_logo_pos_y ?? meta.header_logo_pos_y ?? 11;
+
+  // 8. Signer 1
+  const showSigner1 = template?.show_signer1 ?? meta.show_signer1 ?? true;
+  const signer1Role = template?.signer1_role ?? meta.signer1_role ?? 'Head of TnD & Academy';
+  const signer1Name = template?.signer1_name ?? meta.signer1_name ?? 'Rian Hidayat, S.Psi';
+  const signer1SigUrl = template?.signer1_signature_url ?? meta.signer1_signature_url ?? null;
+  const signer1X = template?.signer1_pos_x ?? meta.signer1_pos_x ?? 24;
+  const signer1Y = template?.signer1_pos_y ?? meta.signer1_pos_y ?? 85;
+  const signer1Color = template?.signer1_font_color ?? meta.signer1_font_color ?? '#1e293b';
+
+  // 9. Signer 2
+  const showSigner2 = template?.show_signer2 ?? meta.show_signer2 ?? true;
+  const signer2Role = template?.signer2_role ?? meta.signer2_role ?? 'Operations Director';
+  const signer2Name = template?.signer2_name ?? meta.signer2_name ?? 'Hendri Wijaya, B.Bus';
+  const signer2SigUrl = template?.signer2_signature_url ?? meta.signer2_signature_url ?? null;
+  const signer2X = template?.signer2_pos_x ?? meta.signer2_pos_x ?? 76;
+  const signer2Y = template?.signer2_pos_y ?? meta.signer2_pos_y ?? 85;
+  const signer2Color = template?.signer2_font_color ?? meta.signer2_font_color ?? '#1e293b';
+
+  // 10. QR & Seal
+  const showQr = template?.show_qr ?? meta.show_qr ?? true;
+  const qrX = template?.qr_pos_x ?? meta.qr_pos_x ?? 91;
+  const qrY = template?.qr_pos_y ?? meta.qr_pos_y ?? 85;
+  const qrSize = template?.qr_size ?? meta.qr_size ?? 48;
+
+  const showSeal = template?.show_seal ?? meta.show_seal ?? (customBgUrl ? false : true);
+  const sealX = template?.seal_pos_x ?? meta.seal_pos_x ?? 50;
+  const sealY = template?.seal_pos_y ?? meta.seal_pos_y ?? 82;
+
+  const showBorder =
+    propShowBorder !== undefined
+      ? propShowBorder
+      : template?.show_border ?? meta.show_border ?? (customBgUrl ? false : true);
 
   const isGoldTheme = theme.includes('gold');
   const isEmeraldTheme = theme.includes('emerald');
   const isMinimalistTheme = theme.includes('minimalist');
 
-  // Background gradient & border palettes
   let outerBorderColor = '#0F4F68';
   let innerBorderColor = '#D4AF37';
   let bgGradient = 'from-slate-50 via-white to-sky-50/40';
@@ -83,6 +256,20 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
     accentColor = '#0284C7';
   }
 
+  const resolveFontFamily = (family: string) => {
+    if (family === 'serif') return "'Georgia', 'Playfair Display', 'Times New Roman', serif";
+    if (family === 'cursive') return "'Brush Script MT', 'Great Vibes', cursive";
+    if (family === 'mono') return "'Courier New', monospace";
+    return "'Inter', system-ui, -apple-system, sans-serif";
+  };
+
+  const renderSelectionRing = (key: string) => {
+    if (interactiveSelection === key) {
+      return 'ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent bg-blue-500/10 rounded-sm cursor-pointer';
+    }
+    return onSelectElement ? 'hover:outline-dashed hover:outline-1 hover:outline-blue-400 cursor-pointer' : '';
+  };
+
   return (
     <div
       style={{
@@ -91,233 +278,406 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
       }}
       className="print:transform-none select-none transition-transform duration-200"
     >
-      {/* 4:3 Aspect Ratio Certificate Document (Width: 800px, Height: 560px standard vector canvas) */}
+      {/* 4:3 Aspect Ratio (800 x 560 Standard Vector Canvas) */}
       <div
-        className={`relative w-[800px] h-[560px] bg-gradient-to-br ${bgGradient} text-slate-800 rounded-lg shadow-xl overflow-hidden print:shadow-none print:w-full print:h-full`}
+        className={`relative w-[800px] h-[560px] ${
+          customBgUrl ? 'bg-white' : `bg-gradient-to-br ${bgGradient}`
+        } text-slate-800 rounded-lg shadow-xl overflow-hidden print:shadow-none print:w-full print:h-full`}
         style={{
           boxSizing: 'border-box',
           fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
         }}
       >
-        {/* Decorative Watermark & Corner Ornaments */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-[0.03] flex items-center justify-center"
-          style={{
-            backgroundImage: `radial-gradient(circle at 50% 50%, ${outerBorderColor} 2px, transparent 2px)`,
-            backgroundSize: '24px 24px',
-          }}
-        />
+        {/* ======================================================== */}
+        {/* BACKGROUND LAYER                                         */}
+        {/* ======================================================== */}
+        {customBgUrl ? (
+          customBgUrl.toLowerCase().endsWith('.pdf') ? (
+            <iframe
+              src={`${customBgUrl.startsWith('http') ? customBgUrl : `${API_BASE_URL}${customBgUrl}`}#toolbar=0&navpanes=0&scrollbar=0`}
+              className="absolute inset-0 w-full h-full border-0 pointer-events-none z-0"
+            />
+          ) : (
+            <img
+              src={customBgUrl.startsWith('http') ? customBgUrl : `${API_BASE_URL}${customBgUrl}`}
+              alt="Custom Certificate Design"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+            />
+          )
+        ) : (
+          /* Watermark pattern only for preset theme */
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.03] flex items-center justify-center"
+            style={{
+              backgroundImage: `radial-gradient(circle at 50% 50%, ${outerBorderColor} 2px, transparent 2px)`,
+              backgroundSize: '24px 24px',
+            }}
+          />
+        )}
 
-        {/* Outer Ornamental Frame */}
+        {/* Optional Border */}
         {showBorder && (
           <div
-            className="absolute inset-4 rounded-md pointer-events-none"
-            style={{
-              border: `3px double ${outerBorderColor}`,
-            }}
+            className="absolute inset-4 rounded-md pointer-events-none z-10"
+            style={{ border: `3px double ${outerBorderColor}` }}
           >
-            {/* Inner Gold Thin Border */}
             <div
               className="absolute inset-1.5 rounded-sm"
-              style={{
-                border: `1px solid ${innerBorderColor}`,
-              }}
+              style={{ border: `1px solid ${innerBorderColor}` }}
             />
           </div>
         )}
 
-        {/* Corner Corner Pieces */}
-        <div
-          className="absolute top-5 left-5 w-6 h-6 border-t-2 border-l-2 pointer-events-none"
-          style={{ borderColor: innerBorderColor }}
-        />
-        <div
-          className="absolute top-5 right-5 w-6 h-6 border-t-2 border-r-2 pointer-events-none"
-          style={{ borderColor: innerBorderColor }}
-        />
-        <div
-          className="absolute bottom-5 left-5 w-6 h-6 border-b-2 border-l-2 pointer-events-none"
-          style={{ borderColor: innerBorderColor }}
-        />
-        <div
-          className="absolute bottom-5 right-5 w-6 h-6 border-b-2 border-r-2 pointer-events-none"
-          style={{ borderColor: innerBorderColor }}
-        />
-
-        {/* Header: Logo & Organization Title */}
-        <div className="pt-9 px-12 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white shadow-xs p-1 border border-slate-200/80 flex items-center justify-center">
+        {/* ======================================================== */}
+        {/* HEADER LOGO & INSTANSI                                   */}
+        {/* ======================================================== */}
+        {showHeaderLogo && (
+          <div
+            onClick={() => onSelectElement?.('headerLogo')}
+            className={`absolute z-20 flex items-center gap-3 ${renderSelectionRing('headerLogo')}`}
+            style={{
+              left: `${headerLogoX}%`,
+              top: `${headerLogoY}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="w-9 h-9 rounded-lg bg-white shadow-xs p-1 border border-slate-200/80 flex items-center justify-center">
               <img src={logoTnd} alt="TnD Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-800 leading-none">
+              <p className="text-[10.5px] font-black uppercase tracking-widest text-slate-800 leading-none">
                 PT SOBAT KULINER INDONESIA
               </p>
-              <p className="text-[9px] font-semibold tracking-wider text-slate-500 uppercase mt-0.5">
+              <p className="text-[8.5px] font-semibold tracking-wider text-slate-500 uppercase mt-0.5">
                 Training & Development Academy LMS
               </p>
             </div>
           </div>
+        )}
 
-          <div className="text-right">
-            <div
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9.5px] font-bold tracking-wider uppercase border"
+        {/* ======================================================== */}
+        {/* 1. JUDUL SERTIFIKAT (TITLE)                              */}
+        {/* ======================================================== */}
+        {showTitle && (
+          <div
+            onClick={() => onSelectElement?.('title')}
+            className={`absolute z-20 text-center transition-all p-1 ${renderSelectionRing('title')}`}
+            style={{
+              left: `${titleX}%`,
+              top: `${titleY}%`,
+              transform: 'translate(-50%, -50%)',
+              maxWidth: '90%',
+            }}
+          >
+            <h2
+              className="font-black uppercase tracking-[0.22em] leading-tight"
               style={{
-                backgroundColor: `${accentColor}15`,
-                borderColor: `${accentColor}40`,
-                color: outerBorderColor,
+                fontSize: `${titleSize}px`,
+                color: titleColor,
+                fontFamily: resolveFontFamily(titleFontFamily),
               }}
             >
-              <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              <span>Sertifikat Terverifikasi Resmi</span>
-            </div>
-            <p className="text-[8.5px] font-mono text-slate-400 mt-1">
-              No: {certificateNumber}
-            </p>
+              {titleText}
+            </h2>
+            {titleSubtext && (
+              <div className="flex items-center justify-center gap-2.5 mt-1">
+                <div className="w-12 h-[1px]" style={{ backgroundColor: innerBorderColor }} />
+                <p className="text-[10.5px] font-semibold uppercase tracking-widest text-slate-500">
+                  {titleSubtext}
+                </p>
+                <div className="w-12 h-[1px]" style={{ backgroundColor: innerBorderColor }} />
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Certificate Title */}
-        <div className="text-center mt-5">
-          <h2
-            className="text-2xl font-black uppercase tracking-[0.25em] text-slate-900"
-            style={{ color: outerBorderColor }}
+        {/* ======================================================== */}
+        {/* 2. TEKS PENGANTAR (INTRO)                                */}
+        {/* ======================================================== */}
+        {showIntro && (
+          <div
+            onClick={() => onSelectElement?.('intro')}
+            className={`absolute z-20 text-center transition-all p-1 ${renderSelectionRing('intro')}`}
+            style={{
+              left: `${introX}%`,
+              top: `${introY}%`,
+              transform: 'translate(-50%, -50%)',
+              maxWidth: '85%',
+            }}
           >
-            SERTIFIKAT KELULUSAN
-          </h2>
-          <div className="flex items-center justify-center gap-3 mt-1.5">
-            <div className="w-16 h-[1.5px]" style={{ backgroundColor: innerBorderColor }} />
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
-              Certificate of Completion & Excellence
+            <p
+              className="font-medium italic leading-tight"
+              style={{
+                fontSize: `${introSize}px`,
+                color: introColor,
+              }}
+            >
+              {introText}
             </p>
-            <div className="w-16 h-[1.5px]" style={{ backgroundColor: innerBorderColor }} />
           </div>
-        </div>
+        )}
 
-        {/* Body intro */}
-        <div className="text-center mt-3">
-          <p className="text-[12px] text-slate-500 font-medium italic">
-            Diberikan dengan hormat dan apresiasi setinggi-tingginya kepada:
-          </p>
-        </div>
-
-        {/* Dynamic Recipient Name (with coordinates & styling) */}
+        {/* ======================================================== */}
+        {/* 3. NAMA PESERTA                                          */}
+        {/* ======================================================== */}
         <div
-          className="w-full text-center px-8 transition-all"
+          onClick={() => onSelectElement?.('name')}
+          className={`absolute z-20 transition-all p-1.5 ${renderSelectionRing('name')}`}
           style={{
-            marginTop: `${(nameY - 44) * 5}px`,
+            left: `${nameX}%`,
+            top: `${nameY}%`,
+            transform: 'translate(-50%, -50%)',
+            textAlign: nameAlign,
+            maxWidth: '90%',
           }}
         >
           <h3
-            className="font-black tracking-tight drop-shadow-xs"
+            className="font-bold tracking-tight drop-shadow-2xs leading-tight whitespace-nowrap"
             style={{
               fontSize: `${nameFontSize}px`,
               color: nameFontColor,
-              fontFamily: "'Georgia', 'Times New Roman', serif",
+              fontFamily: resolveFontFamily(nameFontFamily),
             }}
           >
             {recipientName}
           </h3>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mt-0.5">
-            {divisionName}
-          </p>
+          {!customBgUrl && (
+            <>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600 mt-0.5">
+                {divisionName}
+              </p>
+              <div
+                className="w-44 h-[2px] mx-auto mt-2 rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${innerBorderColor}, transparent)`,
+                }}
+              />
+            </>
+          )}
+        </div>
+
+        {/* ======================================================== */}
+        {/* 4. NOMOR SERTIFIKAT                                      */}
+        {/* ======================================================== */}
+        {showCertNo && (
           <div
-            className="w-44 h-[2px] mx-auto mt-2 rounded-full"
+            onClick={() => onSelectElement?.('certNo')}
+            className={`absolute z-20 transition-all p-1 ${renderSelectionRing('certNo')}`}
             style={{
-              background: `linear-gradient(90deg, transparent, ${innerBorderColor}, transparent)`,
+              left: `${certNoX}%`,
+              top: `${certNoY}%`,
+              transform: 'translate(-50%, -50%)',
             }}
-          />
-        </div>
-
-        {/* Course / Achievement statement */}
-        <div className="text-center px-14 mt-3">
-          <p className="text-[11.5px] text-slate-600 leading-relaxed max-w-xl mx-auto">
-            Telah berhasil menyelesaikan seluruh materi pelatihan, evaluasi standar kerja operasional, dan lulus uji kompetensi kuis dengan nilai kelulusan prima{' '}
-            <strong className="text-slate-900 font-bold">({score}%)</strong> pada modul:
-          </p>
-          <p
-            className="text-[13.5px] font-bold text-slate-800 mt-1 max-w-lg mx-auto line-clamp-2"
-            style={{ color: outerBorderColor }}
           >
-            “{courseTitle}”
-          </p>
-        </div>
+            <p
+              className="font-mono font-bold tracking-wider whitespace-nowrap"
+              style={{
+                fontSize: `${certNoSize}px`,
+                color: certNoColor,
+              }}
+            >
+              No: {certificateNumber}
+            </p>
+          </div>
+        )}
 
-        {/* Footer with Signatures, QR Code & Official Seal */}
-        <div className="absolute bottom-6 left-12 right-12 flex items-end justify-between">
-          {/* Left: Issued Date & Signer 1 */}
-          <div className="text-center w-48">
-            <p className="text-[9.5px] text-slate-500 font-medium">
+        {/* ======================================================== */}
+        {/* 5. MODUL / DESKRIPSI PENCAPAIAN                          */}
+        {/* ======================================================== */}
+        {showCourse && (
+          <div
+            onClick={() => onSelectElement?.('course')}
+            className={`absolute z-20 transition-all p-1 text-center ${renderSelectionRing('course')}`}
+            style={{
+              left: `${courseX}%`,
+              top: `${courseY}%`,
+              transform: 'translate(-50%, -50%)',
+              maxWidth: '85%',
+            }}
+          >
+            <p
+              className="font-medium leading-relaxed"
+              style={{
+                fontSize: `${courseSize}px`,
+                color: courseColor,
+              }}
+            >
+              {courseCustomText.replace('{course}', courseTitle)}
+            </p>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 6. TANGGAL TERBIT                                        */}
+        {/* ======================================================== */}
+        {showDate && (
+          <div
+            onClick={() => onSelectElement?.('date')}
+            className={`absolute z-20 transition-all p-1 ${renderSelectionRing('date')}`}
+            style={{
+              left: `${dateX}%`,
+              top: `${dateY}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <p
+              className="font-medium whitespace-nowrap"
+              style={{
+                fontSize: `${dateSize}px`,
+                color: dateColor,
+              }}
+            >
               Jakarta, {issueDate}
             </p>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 7. SIGNER 1 (KIRI)                                       */}
+        {/* ======================================================== */}
+        {showSigner1 && (
+          <div
+            onClick={() => onSelectElement?.('signer1')}
+            className={`absolute z-20 transition-all p-1.5 text-center w-52 ${renderSelectionRing('signer1')}`}
+            style={{
+              left: `${signer1X}%`,
+              top: `${signer1Y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
             <div className="h-10 flex items-center justify-center my-0.5">
-              <span
-                className="text-lg italic font-bold opacity-80"
-                style={{
-                  fontFamily: "'Brush Script MT', 'Brush Script Std', cursive",
-                  color: outerBorderColor,
-                }}
-              >
-                Rian Hidayat
-              </span>
+              {signer1SigUrl ? (
+                <img
+                  src={
+                    signer1SigUrl.startsWith('http')
+                      ? signer1SigUrl
+                      : `${API_BASE_URL}${signer1SigUrl}`
+                  }
+                  alt="Tanda Tangan 1"
+                  className="h-9 max-w-[130px] object-contain"
+                />
+              ) : (
+                <span
+                  className="text-xl italic font-bold opacity-85"
+                  style={{
+                    fontFamily: "'Brush Script MT', 'Great Vibes', cursive",
+                    color: signer1Color,
+                  }}
+                >
+                  {signer1Name.split(',')[0]}
+                </span>
+              )}
             </div>
             <div className="w-full h-[1px] bg-slate-300" />
-            <p className="text-[10px] font-bold text-slate-800 mt-1">
-              {trainerOrIssuerName}
+            <p
+              className="text-[10.5px] font-bold mt-1 whitespace-nowrap"
+              style={{ color: signer1Color }}
+            >
+              {signer1Name}
             </p>
-            <p className="text-[8.5px] text-slate-500">Head of TnD & Academy</p>
+            <p className="text-[9px] font-medium text-slate-500 line-clamp-1">
+              {signer1Role}
+            </p>
           </div>
+        )}
 
-          {/* Center: Gold Official Seal Stamp */}
-          <div className="flex flex-col items-center">
+        {/* ======================================================== */}
+        {/* 8. SIGNER 2 (KANAN)                                      */}
+        {/* ======================================================== */}
+        {showSigner2 && (
+          <div
+            onClick={() => onSelectElement?.('signer2')}
+            className={`absolute z-20 transition-all p-1.5 text-center w-52 ${renderSelectionRing('signer2')}`}
+            style={{
+              left: `${signer2X}%`,
+              top: `${signer2Y}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="h-10 flex items-center justify-center my-0.5">
+              {signer2SigUrl ? (
+                <img
+                  src={
+                    signer2SigUrl.startsWith('http')
+                      ? signer2SigUrl
+                      : `${API_BASE_URL}${signer2SigUrl}`
+                  }
+                  alt="Tanda Tangan 2"
+                  className="h-9 max-w-[130px] object-contain"
+                />
+              ) : (
+                <span
+                  className="text-xl italic font-bold opacity-85"
+                  style={{
+                    fontFamily: "'Brush Script MT', 'Great Vibes', cursive",
+                    color: signer2Color,
+                  }}
+                >
+                  {signer2Name.split(',')[0]}
+                </span>
+              )}
+            </div>
+            <div className="w-full h-[1px] bg-slate-300" />
+            <p
+              className="text-[10.5px] font-bold mt-1 whitespace-nowrap"
+              style={{ color: signer2Color }}
+            >
+              {signer2Name}
+            </p>
+            <p className="text-[9px] font-medium text-slate-500 line-clamp-1">
+              {signer2Role}
+            </p>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* 9. STEMPEL SEAL                                          */}
+        {/* ======================================================== */}
+        {showSeal && (
+          <div
+            onClick={() => onSelectElement?.('seal')}
+            className={`absolute z-20 transition-all flex flex-col items-center ${renderSelectionRing('seal')}`}
+            style={{
+              left: `${sealX}%`,
+              top: `${sealY}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center p-1.5 shadow-md border-2 border-dashed"
-              style={{
-                backgroundColor: '#FFFFFF',
-                borderColor: innerBorderColor,
-              }}
+              className="w-14 h-14 rounded-full flex items-center justify-center p-1 shadow-md border-2 border-dashed bg-white"
+              style={{ borderColor: innerBorderColor }}
             >
               <div
                 className="w-full h-full rounded-full flex flex-col items-center justify-center text-white"
                 style={{ backgroundColor: sealColor }}
               >
-                <Award className="w-5 h-5 text-amber-300" />
-                <span className="text-[6.5px] font-black tracking-widest uppercase mt-0.5">
+                <Award className="w-4 h-4 text-amber-300" />
+                <span className="text-[6px] font-black tracking-widest uppercase mt-0.5">
                   OFFICIAL
                 </span>
               </div>
             </div>
-            <p className="text-[8px] font-bold text-slate-400 mt-1 tracking-wider uppercase">
-              TnD Seal of Excellence
-            </p>
           </div>
+        )}
 
-          {/* Right: Operations Director & QR Verification Code */}
-          <div className="flex items-center gap-3 w-52 justify-end">
-            <div className="text-center flex-1">
-              <p className="text-[9.5px] text-slate-500 font-medium">Disahkan Oleh</p>
-              <div className="h-10 flex items-center justify-center my-0.5">
-                <span
-                  className="text-lg italic font-bold opacity-80"
-                  style={{
-                    fontFamily: "'Brush Script MT', 'Brush Script Std', cursive",
-                    color: outerBorderColor,
-                  }}
-                >
-                  Hendri Wijaya
-                </span>
-              </div>
-              <div className="w-full h-[1px] bg-slate-300" />
-              <p className="text-[10px] font-bold text-slate-800 mt-1">
-                Hendri Wijaya, B.Bus
-              </p>
-              <p className="text-[8.5px] text-slate-500">Operations Director</p>
-            </div>
-
-            {/* QR Mockup for verification */}
+        {/* ======================================================== */}
+        {/* 10. QR CODE VERIFIKASI                                   */}
+        {/* ======================================================== */}
+        {showQr && (
+          <div
+            onClick={() => onSelectElement?.('qr')}
+            className={`absolute z-20 transition-all ${renderSelectionRing('qr')}`}
+            style={{
+              left: `${qrX}%`,
+              top: `${qrY}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
             <div className="p-1 rounded-md bg-white border border-slate-200 shadow-xs flex flex-col items-center shrink-0">
-              <div className="w-11 h-11 bg-slate-900 rounded-xs p-1 flex flex-col justify-between">
+              <div
+                className="bg-slate-900 rounded-xs p-1 flex flex-col justify-between"
+                style={{ width: `${qrSize}px`, height: `${qrSize}px` }}
+              >
                 <div className="flex justify-between">
                   <div className="w-2.5 h-2.5 bg-white rounded-xs" />
                   <div className="w-2.5 h-2.5 bg-white rounded-xs" />
@@ -328,12 +688,12 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
                   <div className="w-1.5 h-1.5 bg-white rounded-xs self-end" />
                 </div>
               </div>
-              <span className="text-[6.5px] font-mono font-bold text-slate-500 mt-0.5">
+              <span className="text-[5.5px] font-mono font-bold text-slate-500 mt-0.5">
                 SCAN VERIFY
               </span>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

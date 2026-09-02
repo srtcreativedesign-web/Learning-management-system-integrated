@@ -7,16 +7,20 @@ export class CertificateTemplateService {
 
   async createTemplate(data: {
     name: string;
-    bg_image_url: string;
-    name_pos_x: number;
-    name_pos_y: number;
+    bg_image_url?: string;
+    base_pdf_url?: string;
+    pdfme_template?: any;
+    name_pos_x?: number;
+    name_pos_y?: number;
     name_font_size?: number;
     name_font_color?: string;
   }) {
     return this.prisma.certificateTemplate.create({
       data: {
         name: data.name,
-        bg_image_url: data.bg_image_url || 'theme:classic-blue',
+        bg_image_url: data.bg_image_url || 'theme:classic-navy',
+        base_pdf_url: data.base_pdf_url || null,
+        pdfme_template: data.pdfme_template || null,
         name_pos_x: Number(data.name_pos_x ?? 50),
         name_pos_y: Number(data.name_pos_y ?? 45),
         name_font_size: Number(data.name_font_size ?? 32),
@@ -75,6 +79,8 @@ export class CertificateTemplateService {
     data: {
       name?: string;
       bg_image_url?: string;
+      base_pdf_url?: string;
+      pdfme_template?: any;
       name_pos_x?: number;
       name_pos_y?: number;
       name_font_size?: number;
@@ -91,6 +97,8 @@ export class CertificateTemplateService {
       data: {
         ...(data.name && { name: data.name }),
         ...(data.bg_image_url && { bg_image_url: data.bg_image_url }),
+        ...(data.base_pdf_url !== undefined && { base_pdf_url: data.base_pdf_url }),
+        ...(data.pdfme_template !== undefined && { pdfme_template: data.pdfme_template }),
         ...(data.name_pos_x !== undefined && { name_pos_x: Number(data.name_pos_x) }),
         ...(data.name_pos_y !== undefined && { name_pos_y: Number(data.name_pos_y) }),
         ...(data.name_font_size !== undefined && { name_font_size: Number(data.name_font_size) }),
@@ -249,10 +257,40 @@ export class CertificateTemplateService {
   }
 
   /**
-   * Mendapatkan daftar sertifikat yang dimiliki oleh seorang karyawan tertentu
+   * Mendapatkan daftar sertifikat yang dimiliki oleh seorang karyawan tertentu (format internal LMS)
    */
   async getUserCertificates(userId: string) {
     const all = await this.getIssuedCertificates();
     return all.filter((c) => c.user_id === userId);
+  }
+
+  /**
+   * Endpoint kontrak resmi untuk SobatHR API:
+   * GET /api/certificates/user/{hris_user_id}
+   */
+  async getUserCertificatesContract(hrisUserId: string) {
+    const userShadow = await (this.prisma as any).userShadow.findFirst({
+      where: {
+        OR: [{ hris_user_id: String(hrisUserId) }, { id: String(hrisUserId) }],
+      },
+    });
+
+    if (!userShadow) {
+      return { data: [] };
+    }
+
+    const all = await this.getIssuedCertificates();
+    const userCerts = all.filter((c) => c.user_id === userShadow.id);
+
+    const data = userCerts.map((cert) => ({
+      id: cert.id,
+      certificate_number: cert.certificate_number,
+      course_title: cert.course_title,
+      score: cert.score,
+      completed_at: new Date(cert.issue_date).toISOString(),
+      file_url: `/certificate-templates/issued/${cert.id}/pdf`,
+    }));
+
+    return { data };
   }
 }
