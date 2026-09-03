@@ -21,9 +21,9 @@ export default function TabLayout() {
       <Tabs.Screen 
         name="outlets" 
         options={{ 
-          title: 'Outlet',
+          title: 'Riwayat',
           headerShown: false,
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="storefront" size={size || 22} color={color} />,
+          tabBarIcon: ({ color, size }) => <MaterialIcons name="history" size={size || 22} color={color} />,
         }} 
       />
       <Tabs.Screen 

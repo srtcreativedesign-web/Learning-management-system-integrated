@@ -11,7 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
 import {
   fetchInHouseSessionsApi,
@@ -66,6 +66,7 @@ function SkeletonRow({ last }: { last?: boolean }) {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ openAction?: 'audit' | 'training' }>();
   const { user } = useAuth();
 
   const isManager =
@@ -87,12 +88,12 @@ export default function HomeScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  // Manager backup action states
+  // On-demand action states
   const [isBackupPickerOpen, setIsBackupPickerOpen] = useState(false);
   const [backupActionType, setBackupActionType] = useState<'audit' | 'training' | null>(null);
   const [outletSearchQuery, setOutletSearchQuery] = useState('');
 
-  // Bottom sheets for executing backup actions
+  // Bottom sheets for executing on-demand actions
   const [selectedOutletForBackup, setSelectedOutletForBackup] = useState<{ id: string; name: string; division?: string } | null>(null);
   const [isAuditSheetOpen, setIsAuditSheetOpen] = useState(false);
   const [isTrainingSheetOpen, setIsTrainingSheetOpen] = useState(false);
@@ -103,53 +104,46 @@ export default function HomeScreen() {
   const loadData = useCallback(async () => {
     setLoadError(false);
     try {
-      if (isManager) {
-        // Manager views all data
-        const [outletsData, sessionsData, auditData] = await Promise.all([
-          fetchOutletsApi(),
-          fetchInHouseSessionsApi(),
-          fetchAuditInspectionsApi(),
-        ]);
-        const oMap: Record<string, string> = {};
-        if (Array.isArray(outletsData)) {
-          setRawOutlets(outletsData);
-          outletsData.forEach((o: any) => {
-            if (o.id) oMap[o.id] = o.name;
-          });
-          setOutletCount(outletsData.length);
-        }
-        setOutletsMap(oMap);
-        setRecentSessions(Array.isArray(sessionsData) ? sessionsData : []);
-        setRecentAudits(Array.isArray(auditData) ? auditData : []);
-      } else if (isTrainer) {
-        const [outletsData, sessionsData] = await Promise.all([fetchOutletsApi(), fetchInHouseSessionsApi()]);
-        const oMap: Record<string, string> = {};
-        if (Array.isArray(outletsData)) {
-          setRawOutlets(outletsData);
-          outletsData.forEach((o: any) => {
-            if (o.id) oMap[o.id] = o.name;
-          });
-          setOutletCount(outletsData.length);
-        }
-        setOutletsMap(oMap);
-        setRecentSessions(Array.isArray(sessionsData) ? sessionsData : []);
-      } else {
-        const [outletsData, auditInspections] = await Promise.all([fetchOutletsApi(), fetchAuditInspectionsApi()]);
-        const oMap: Record<string, string> = {};
-        if (Array.isArray(outletsData)) {
-          setRawOutlets(outletsData);
-          outletsData.forEach((o: any) => {
-            if (o.id) oMap[o.id] = o.name;
-          });
-          setOutletCount(outletsData.length);
-        }
-        setOutletsMap(oMap);
-        setRecentAudits(Array.isArray(auditInspections) ? auditInspections : []);
+      const [outletsData, sessionsData, auditData] = await Promise.all([
+        fetchOutletsApi(),
+        fetchInHouseSessionsApi(),
+        fetchAuditInspectionsApi(),
+      ]);
+      const oMap: Record<string, string> = {};
+      if (Array.isArray(outletsData)) {
+        setRawOutlets(outletsData);
+        outletsData.forEach((o: any) => {
+          if (o.id) oMap[o.id] = o.name;
+        });
+        setOutletCount(outletsData.length);
       }
+      setOutletsMap(oMap);
+      setRecentSessions(Array.isArray(sessionsData) ? sessionsData : []);
+      setRecentAudits(Array.isArray(auditData) ? auditData : []);
     } catch {
       setLoadError(true);
     }
-  }, [isManager, isTrainer]);
+  }, []);
+
+  const handleStartActivity = useCallback((actionType: 'audit' | 'training') => {
+    if (actionType === 'audit' && isTrainer) {
+      Alert.alert('Akses Dibatasi', 'Peran Trainer hanya berwenang untuk evaluasi In-House Training.');
+      return;
+    }
+    if (actionType === 'training' && !isTrainer && !isManager) {
+      Alert.alert('Akses Dibatasi', 'Peran Auditor hanya berwenang untuk inspeksi Audit Lapangan.');
+      return;
+    }
+    setBackupActionType(actionType);
+    setOutletSearchQuery('');
+    setIsBackupPickerOpen(true);
+  }, [isTrainer, isManager]);
+
+  useEffect(() => {
+    if (params.openAction === 'audit' || params.openAction === 'training') {
+      handleStartActivity(params.openAction);
+    }
+  }, [params.openAction, handleStartActivity]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -351,149 +345,150 @@ export default function HomeScreen() {
         </BrandHeader>
 
         <View style={{ paddingHorizontal: 20 }}>
-          {/* ================= MANAGER BACKUP ACTION (CLEAN 2-BUTTON ROW) ================= */}
-          {isManager ? (
-            <View style={{ marginTop: -26, ...SHADOW.raised }}>
-              <Card style={{ padding: 16 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MaterialIcons name="flash-on" size={18} color={COLORS.primary} />
-                    <Text style={{ ...TYPE.h3, fontSize: 14.5, color: COLORS.textMain }}>
-                      Aksi Cepat Supervisi
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      backgroundColor: COLORS.surfaceSunken,
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: RADIUS.pill,
-                    }}
-                  >
-                    <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>Backup Tim Gerai</Text>
-                  </View>
+          {/* ================= DIRECT ON-DEMAND ACTION MENU (JADWAL BEBAS) ================= */}
+          <View style={{ marginTop: -26, ...SHADOW.raised }}>
+            <Card style={{ padding: 18 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <MaterialIcons name="bolt" size={19} color={COLORS.primary} />
+                  <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain, fontWeight: '800' }}>
+                    Mulai Aktivitas Baru
+                  </Text>
                 </View>
+                <View
+                  style={{
+                    backgroundColor: COLORS.surfaceSunken,
+                    paddingHorizontal: 9,
+                    paddingVertical: 3.5,
+                    borderRadius: RADIUS.pill,
+                  }}
+                >
+                  <Text style={{ ...TYPE.micro, color: COLORS.textSecondary, fontWeight: '800' }}>JADWAL BEBAS</Text>
+                </View>
+              </View>
 
-                {/* 2 Clean Side-by-Side Action Buttons */}
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity
-                    onPress={() => handleStartBackup('audit')}
-                    activeOpacity={0.85}
-                    style={{
-                      flex: 1,
-                      backgroundColor: COLORS.successLight,
-                      borderRadius: RADIUS.md,
-                      paddingVertical: 14,
-                      paddingHorizontal: 12,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      borderWidth: 1,
-                      borderColor: COLORS.success,
-                    }}
-                  >
-                    <MaterialIcons name="fact-check" size={20} color={COLORS.success} />
-                    <Text style={{ fontSize: 13.5, fontWeight: '700', color: COLORS.success }}>
-                      Audit Gerai
-                    </Text>
-                  </TouchableOpacity>
+              <Text style={{ ...TYPE.label, color: COLORS.textSecondary, marginBottom: 14, lineHeight: 18 }}>
+                {isTrainer
+                  ? 'Mulai evaluasi standar operasional & kompetensi barista gerai secara on-demand:'
+                  : !isManager
+                  ? 'Mulai inspeksi kepatuhan checklist gerai & bukti foto temuan secara on-demand:'
+                  : 'Pilih menu supervisi di bawah ini untuk memulai evaluasi atau inspeksi on-demand:'}
+              </Text>
 
+              {/* Action Cards with Strict RBAC */}
+              <View style={{ gap: 11 }}>
+                {/* 1. Mulai In-House Training (Hanya Trainer & Manager) */}
+                {(isTrainer || isManager) && (
                   <TouchableOpacity
-                    onPress={() => handleStartBackup('training')}
-                    activeOpacity={0.85}
+                    onPress={() => handleStartActivity('training')}
+                    activeOpacity={0.88}
                     style={{
-                      flex: 1,
                       backgroundColor: COLORS.primaryLight,
                       borderRadius: RADIUS.md,
-                      paddingVertical: 14,
-                      paddingHorizontal: 12,
+                      padding: 14,
                       flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      borderWidth: 1,
+                      justifyContent: 'space-between',
+                      borderWidth: 1.5,
                       borderColor: COLORS.primary,
                     }}
                   >
-                    <MaterialIcons name="school" size={20} color={COLORS.primary} />
-                    <Text style={{ fontSize: 13.5, fontWeight: '700', color: COLORS.primary }}>
-                      In-House Training
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </Card>
-            </View>
-          ) : (
-            /* TRAINER / AUDITOR STANDARD CARD */
-            <View style={{ marginTop: -26, ...SHADOW.raised }}>
-              <Card style={{ padding: 18 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      backgroundColor: isTrainer ? COLORS.primaryLight : COLORS.successLight,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4.5,
-                      borderRadius: RADIUS.pill,
-                    }}
-                  >
-                    <MaterialIcons
-                      name={isTrainer ? 'tune' : 'verified'}
-                      size={14}
-                      color={isTrainer ? COLORS.primary : COLORS.success}
-                    />
-                    <Text
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 22,
+                          backgroundColor: COLORS.primary,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="school" size={24} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14.5, fontWeight: '800', color: COLORS.primary }}>
+                          Mulai In-House Training
+                        </Text>
+                        <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
+                          Asesmen kompetensi staf & barista gerai
+                        </Text>
+                      </View>
+                    </View>
+                    <View
                       style={{
-                        ...TYPE.micro,
-                        color: isTrainer ? COLORS.primary : COLORS.success,
-                        fontWeight: '800',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        backgroundColor: COLORS.primary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6.5,
+                        borderRadius: RADIUS.pill,
                       }}
                     >
-                      {isTrainer ? 'EVALUASI ON-SITE' : 'INSPEKSI FLEKSIBEL'}
-                    </Text>
-                  </View>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>Pilih Gerai</Text>
+                      <MaterialIcons name="arrow-forward" size={14} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                )}
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <MaterialIcons name="all-inclusive" size={14} color={COLORS.textMuted} />
-                    <Text style={{ ...TYPE.micro, color: COLORS.textMuted }}>KAPAN SAJA</Text>
-                  </View>
-                </View>
-
-                <Text style={{ ...TYPE.h2, color: COLORS.textMain, marginBottom: 4 }}>
-                  {isTrainer ? 'Penilaian On-Site Cabang' : 'Inspeksi Kepatuhan Lapangan'}
-                </Text>
-
-                <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, lineHeight: 18, marginBottom: 14 }}>
-                  {isTrainer
-                    ? 'Pilih cabang untuk mengevaluasi standar operasional & kompetensi barista secara on-demand.'
-                    : 'Pilih cabang outlet secara fleksibel untuk memulai checklist kepatuhan (OK / NOK) & foto temuan.'}
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => router.push('/(tabs)/outlets')}
-                  activeOpacity={0.85}
-                  style={{
-                    backgroundColor: COLORS.brandDeep,
-                    minHeight: 50,
-                    borderRadius: RADIUS.md,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <MaterialIcons name="storefront" size={19} color={COLORS.onBrand} />
-                  <Text style={{ fontSize: 14.5, fontWeight: '700', color: COLORS.onBrand }}>
-                    {isTrainer ? 'Pilih Outlet & Mulai Nilai' : 'Pilih Outlet & Mulai Inspeksi'}
-                  </Text>
-                  <MaterialIcons name="arrow-forward" size={17} color={COLORS.onBrand} />
-                </TouchableOpacity>
-              </Card>
-            </View>
-          )}
+                {/* 2. Mulai Audit Lapangan (Hanya Auditor & Manager) */}
+                {(!isTrainer || isManager) && (
+                  <TouchableOpacity
+                    onPress={() => handleStartActivity('audit')}
+                    activeOpacity={0.88}
+                    style={{
+                      backgroundColor: COLORS.successLight,
+                      borderRadius: RADIUS.md,
+                      padding: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderWidth: 1.5,
+                      borderColor: COLORS.success,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 22,
+                          backgroundColor: COLORS.success,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <MaterialIcons name="fact-check" size={24} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14.5, fontWeight: '800', color: COLORS.success }}>
+                          Mulai Audit Lapangan
+                        </Text>
+                        <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>
+                          Inspeksi kepatuhan gerai (OK/NOK & temuan)
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        backgroundColor: COLORS.success,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6.5,
+                        borderRadius: RADIUS.pill,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>Pilih Gerai</Text>
+                      <MaterialIcons name="arrow-forward" size={14} color="#FFFFFF" />
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Card>
+          </View>
 
           {loadError && (
             <View
@@ -1087,8 +1082,11 @@ export default function HomeScreen() {
             {/* Header */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 }}>
               <View>
-                <Text style={{ ...TYPE.h2, fontSize: 18, color: COLORS.textMain }}>
-                  {backupActionType === 'audit' ? 'Pilih Outlet untuk Audit' : 'Pilih Outlet untuk Training'}
+                <Text style={{ ...TYPE.h2, fontSize: 17, color: COLORS.textMain }}>
+                  {backupActionType === 'audit' ? 'Pilih Gerai untuk Audit Lapangan' : 'Pilih Gerai untuk In-House Training'}
+                </Text>
+                <Text style={{ ...TYPE.micro, color: COLORS.textSecondary, marginTop: 2 }}>
+                  Jadwal Bebas • Pilih gerai untuk memulai on-demand
                 </Text>
               </View>
               <TouchableOpacity
@@ -1194,13 +1192,13 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* ================= BOTTOM SHEETS UNTUK EKSEKUSI BACKUP ================= */}
+      {/* ================= BOTTOM SHEETS UNTUK EKSEKUSI ON-DEMAND ================= */}
       {selectedOutletForBackup && (
         <>
           <AuditInspectionBottomSheet
             visible={isAuditSheetOpen}
             outlet={selectedOutletForBackup}
-            auditorName={user?.name || 'Rian (HRBP Manager)'}
+            auditorName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Auditor Lapangan')}
             onClose={() => setIsAuditSheetOpen(false)}
             onSuccess={() => {
               setIsAuditSheetOpen(false);
@@ -1211,7 +1209,7 @@ export default function HomeScreen() {
           <InHouseAssessmentBottomSheet
             visible={isTrainingSheetOpen}
             outlet={selectedOutletForBackup}
-            trainerName={user?.name || 'Rian (HRBP Manager)'}
+            trainerName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Trainer TnD')}
             onClose={() => setIsTrainingSheetOpen(false)}
             onSuccess={() => {
               setIsTrainingSheetOpen(false);

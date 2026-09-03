@@ -1,8 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, TextInput, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  RefreshControl,
+  Modal,
+  Dimensions,
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
-import { fetchOutletsApi, fetchInHouseSessionsApi, fetchAuditInspectionsApi } from '../../src/services/api';
+import {
+  fetchOutletsApi,
+  fetchInHouseSessionsApi,
+  fetchAuditInspectionsApi,
+} from '../../src/services/api';
 import { InHouseAssessmentBottomSheet } from '../../src/components/training/InHouseAssessmentBottomSheet';
 import { AuditInspectionBottomSheet } from '../../src/components/audit/AuditInspectionBottomSheet';
 import { BrandHeader, BrandStatusScrim } from '../../src/components/ui/BrandHeader';
@@ -10,359 +23,228 @@ import { Card } from '../../src/components/ui/Card';
 import { GradeBadge } from '../../src/components/ui/GradeBadge';
 import { COLORS, RADIUS, SHADOW, TOUCH_MIN, TYPE, GRADE_COLOR } from '../../src/theme';
 
-interface OutletItem {
+interface ActivityItem {
   id: string;
-  name: string;
-  division: string;
-  lastDate: string;
-  status: string;
+  _type: 'training' | 'audit';
+  outlet_id?: string;
+  outlet_name: string;
+  division?: string;
+  dateStr: string;
+  timestamp: number;
+  score: number;
   grade?: 'SB' | 'B' | 'C' | 'K';
-  score?: number;
-  staffCount?: number;
-  isCompliant?: boolean;
+  is_passed?: boolean;
+  is_compliant?: boolean;
+  evaluator_name: string;
+  target_name?: string;
+  ok_items?: number;
+  nok_items?: number;
+  findings?: Array<{
+    point_text?: string;
+    notes?: string;
+    photo_path?: string;
+    photo_uri?: string;
+    is_compliant?: boolean;
+  }>;
+  notes?: string;
+  checklists?: any[];
 }
 
-export default function OutletsScreen() {
+export default function RiwayatScreen() {
   const { user } = useAuth();
   const isManager =
     user?.role?.toUpperCase().includes('HRBP') ||
     user?.role?.toUpperCase().includes('MANAGER') ||
     user?.email?.includes('manager');
   const isTrainer = !isManager && (user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer'));
-  const [filter, setFilter] = useState('Semua');
+
+  const [activeTab, setActiveTab] = useState<'all' | 'training' | 'audit'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [realOutlets, setRealOutlets] = useState<any[]>([]);
-
-  // Trainer Sheet State
-  const [selectedTrainerOutlet, setSelectedTrainerOutlet] = useState<OutletItem | null>(null);
-  const [isTrainerAssessmentOpen, setIsTrainerAssessmentOpen] = useState(false);
-  const [sessionResults, setSessionResults] = useState<Record<string, { grade: 'SB' | 'B' | 'C' | 'K'; score: number; status: string; date?: string }>>({});
-
-  // Auditor Sheet State
-  const [selectedAuditOutlet, setSelectedAuditOutlet] = useState<OutletItem | null>(null);
-  const [isAuditInspectionOpen, setIsAuditInspectionOpen] = useState(false);
-  const [auditResults, setAuditResults] = useState<Record<string, { score: number; status: string; isCompliant: boolean; date?: string }>>({});
-
-  const loadData = () => {
-    // 1. Fetch Outlets
-    const outletsReq = fetchOutletsApi().then((data) => {
-      if (data && data.length > 0) {
-        setRealOutlets(data);
-      }
-    });
-
-    // 2. Fetch Sessions / Inspections
-    if (isManager) {
-      const sessionsReq = fetchInHouseSessionsApi().then((sessions) => {
-        if (sessions && Array.isArray(sessions) && sessions.length > 0) {
-          const resultsMap: Record<string, { grade: 'SB' | 'B' | 'C' | 'K'; score: number; status: string; date?: string }> = {};
-          sessions.forEach((s: any) => {
-            const status = s.is_passed ? 'Lulus Sesi' : 'Perlu Re-Training';
-            const grade = (s.grade || 'B') as 'SB' | 'B' | 'C' | 'K';
-            const score = Math.round(s.percentage || s.total_score || 85);
-            const date = s.training_date
-              ? new Date(s.training_date).toLocaleDateString('id-ID', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })
-              : 'Selesai';
-
-            if (s.outlet_id) resultsMap[s.outlet_id] = { grade, score, status, date };
-            if (s.outlet?.name) resultsMap[s.outlet.name] = { grade, score, status, date };
-            if (s.outlet_name) resultsMap[s.outlet_name] = { grade, score, status, date };
-          });
-          setSessionResults((prev) => ({ ...resultsMap, ...prev }));
-        }
-      });
-
-      const auditReq = fetchAuditInspectionsApi().then((inspections) => {
-        if (inspections && Array.isArray(inspections) && inspections.length > 0) {
-          const resultsMap: Record<string, { score: number; status: string; isCompliant: boolean; date?: string }> = {};
-          inspections.forEach((a: any) => {
-            const isCompliant = a.is_compliant;
-            const status = isCompliant ? 'Compliant' : 'Non-Compliant';
-            const score = a.compliance_score || 85;
-            const date = a.inspection_date
-              ? new Date(a.inspection_date).toLocaleDateString('id-ID', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })
-              : 'Selesai';
-
-            if (a.outlet_id) resultsMap[a.outlet_id] = { score, status, isCompliant, date };
-            if (a.outlet_name) resultsMap[a.outlet_name] = { score, status, isCompliant, date };
-          });
-          setAuditResults((prev) => ({ ...resultsMap, ...prev }));
-        }
-      });
-
-      return Promise.all([outletsReq, sessionsReq, auditReq]).catch(() => undefined);
-    } else if (isTrainer) {
-      const sessionsReq = fetchInHouseSessionsApi().then((sessions) => {
-        if (sessions && Array.isArray(sessions) && sessions.length > 0) {
-          const resultsMap: Record<string, { grade: 'SB' | 'B' | 'C' | 'K'; score: number; status: string; date?: string }> = {};
-          sessions.forEach((s: any) => {
-            const status = s.is_passed ? 'Lulus Sesi' : 'Perlu Re-Training';
-            const grade = (s.grade || 'B') as 'SB' | 'B' | 'C' | 'K';
-            const score = Math.round(s.percentage || s.total_score || 85);
-            const date = s.training_date
-              ? new Date(s.training_date).toLocaleDateString('id-ID', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })
-              : 'Selesai';
-
-            if (s.outlet_id) resultsMap[s.outlet_id] = { grade, score, status, date };
-            if (s.outlet?.name) resultsMap[s.outlet.name] = { grade, score, status, date };
-            if (s.outlet_name) resultsMap[s.outlet_name] = { grade, score, status, date };
-          });
-
-          setSessionResults((prev) => ({
-            ...resultsMap,
-            ...prev,
-          }));
-        }
-      });
-      return Promise.all([outletsReq, sessionsReq]).catch(() => undefined);
-    } else {
-      const auditReq = fetchAuditInspectionsApi().then((inspections) => {
-        if (inspections && Array.isArray(inspections) && inspections.length > 0) {
-          const resultsMap: Record<string, { score: number; status: string; isCompliant: boolean; date?: string }> = {};
-          inspections.forEach((a: any) => {
-            const isCompliant = a.is_compliant;
-            const status = isCompliant ? 'Compliant' : 'Non-Compliant';
-            const score = a.compliance_score || 85;
-            const date = a.inspection_date
-              ? new Date(a.inspection_date).toLocaleDateString('id-ID', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })
-              : 'Selesai';
-
-            if (a.outlet_id) resultsMap[a.outlet_id] = { score, status, isCompliant, date };
-            if (a.outlet_name) resultsMap[a.outlet_name] = { score, status, isCompliant, date };
-          });
-
-          setAuditResults((prev) => ({
-            ...resultsMap,
-            ...prev,
-          }));
-        }
-      });
-      return Promise.all([outletsReq, auditReq]).catch(() => undefined);
-    }
-  };
-
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Raw data from APIs
+  const [trainingSessions, setTrainingSessions] = useState<any[]>([]);
+  const [auditInspections, setAuditInspections] = useState<any[]>([]);
+  const [outletsList, setOutletsList] = useState<any[]>([]);
+
+  // Selected detail modal
+  const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // On-Demand "+ Mulai Baru" states
+  const [isStartActionModalOpen, setIsStartActionModalOpen] = useState(false);
+  const [actionType, setActionType] = useState<'training' | 'audit' | null>(null);
+  const [isOutletPickerOpen, setIsOutletPickerOpen] = useState(false);
+  const [outletSearchQuery, setOutletSearchQuery] = useState('');
+  const [selectedOutlet, setSelectedOutlet] = useState<any | null>(null);
+  const [isTrainingSheetOpen, setIsTrainingSheetOpen] = useState(false);
+  const [isAuditSheetOpen, setIsAuditSheetOpen] = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [outlets, sessions, audits] = await Promise.all([
+        fetchOutletsApi(),
+        fetchInHouseSessionsApi(),
+        fetchAuditInspectionsApi(),
+      ]);
+
+      if (Array.isArray(outlets)) setOutletsList(outlets);
+      if (Array.isArray(sessions)) setTrainingSessions(sessions);
+      if (Array.isArray(audits)) setAuditInspections(audits);
+    } catch (error) {
+      console.error('Error loading history data:', error);
+    }
+  }, []);
+
   useEffect(() => {
-    loadData();
-  }, [user, isManager, isTrainer]);
+    setIsLoading(true);
+    loadData().finally(() => setIsLoading(false));
+  }, [loadData]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     loadData().finally(() => setIsRefreshing(false));
-  }, [user, isManager, isTrainer]);
+  }, [loadData]);
 
-  // Default initial demo outlets (some pending, some evaluated)
-  const defaultTrainerOutlets: OutletItem[] = [
-    { id: '1', name: 'Outlet Senayan City', division: 'POS Terminal Senayan #1', lastDate: 'Belum Dinilai', status: 'Siap Training', staffCount: 6 },
-    { id: '2', name: 'Outlet Central Park', division: 'POS Terminal Central Park #1', lastDate: 'Belum Dinilai', status: 'Siap Training', staffCount: 5 },
-    { id: '3', name: 'Outlet Grand Indonesia', division: 'POS Terminal Grand Indonesia #1', lastDate: 'Belum Dinilai', status: 'Siap Training', staffCount: 8 },
-    { id: '4', name: 'HANS-YIA', division: 'Outlet YIA', lastDate: '10 Juli 2026', status: 'Lulus Sesi', grade: 'SB', score: 96, staffCount: 6 },
-    { id: '5', name: 'KINGTECH-T3E', division: 'Outlet T3E', lastDate: '8 Juli 2026', status: 'Perlu Re-Training', grade: 'C', score: 68, staffCount: 4 },
-  ];
+  // Combine and format history items
+  const combinedActivities = useMemo<ActivityItem[]>(() => {
+    const formattedSessions: ActivityItem[] = trainingSessions.map((s: any) => {
+      const dateVal = s.training_date ? new Date(s.training_date) : new Date();
+      return {
+        id: s.id || `tr-${Math.random()}`,
+        _type: 'training',
+        outlet_id: s.outlet_id,
+        outlet_name: s.outlet_name || s.outlet?.name || 'Gerai Tanpa Nama',
+        division: s.outlet?.division || 'Cabang Operasional',
+        dateStr: dateVal.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }),
+        timestamp: dateVal.getTime(),
+        score: Math.round(s.percentage || s.total_score || 85),
+        grade: (s.grade || 'B') as 'SB' | 'B' | 'C' | 'K',
+        is_passed: s.is_passed !== false,
+        evaluator_name: s.trainer_name || 'Trainer TnD',
+        target_name: s.trainee_name || 'Tim Staf & Barista',
+        notes: s.notes || s.trainer_notes,
+        checklists: s.checklists || s.items || [],
+      };
+    });
 
-  const defaultAuditorOutlets: OutletItem[] = [
-    { id: '1', name: 'Outlet Senayan City', division: 'Operasional, K3 & 5S', lastDate: 'Belum Diaudit', status: 'Siap Diaudit' },
-    { id: '2', name: 'Outlet Central Park', division: 'Standar Sanitasi & Kasir', lastDate: 'Belum Diaudit', status: 'Siap Diaudit' },
-    { id: '3', name: 'Outlet Grand Indonesia', division: 'Operasional & Higienitas', lastDate: 'Belum Diaudit', status: 'Siap Diaudit' },
-    { id: '4', name: 'Outlet Kemang', division: 'Operasional & 5S', lastDate: '8 Juli 2026', status: 'Compliant', score: 95, isCompliant: true },
-    { id: '5', name: 'Outlet Sudirman', division: 'Keselamatan & Kasir', lastDate: '5 Juli 2026', status: 'Non-Compliant', score: 70, isCompliant: false },
-  ];
+    const formattedAudits: ActivityItem[] = auditInspections.map((a: any) => {
+      const dateVal = a.inspection_date ? new Date(a.inspection_date) : new Date();
+      return {
+        id: a.id || `aud-${Math.random()}`,
+        _type: 'audit',
+        outlet_id: a.outlet_id,
+        outlet_name: a.outlet_name || 'Gerai Tanpa Nama',
+        division: a.division || 'Cabang Operasional',
+        dateStr: dateVal.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }),
+        timestamp: dateVal.getTime(),
+        score: Math.round(a.compliance_score || 85),
+        is_compliant: Boolean(a.is_compliant),
+        ok_items: a.ok_items || (a.total_items ? a.total_items - (a.nok_items || 0) : 18),
+        nok_items: a.nok_items ?? (a.findings?.length || 0),
+        evaluator_name: a.auditor_name || 'Auditor Lapangan',
+        target_name: a.pic_name || 'Store Manager / PIC',
+        findings: a.findings || [],
+        notes: a.notes,
+      };
+    });
 
-  const rawOutlets: OutletItem[] = realOutlets.length > 0
-    ? realOutlets.map((o, idx) => ({
-        id: o.id || String(idx + 1),
-        name: o.name,
-        division: o.device_name || (o.device_code ? `Kode: ${o.device_code}` : 'POS Terminal #1'),
-        lastDate: isTrainer ? 'Belum Dinilai' : 'Belum Diaudit',
-        status: isTrainer ? 'Siap Training' : 'Siap Diaudit',
-        staffCount: 5 + (idx % 4),
-      }))
-    : (isTrainer ? defaultTrainerOutlets : defaultAuditorOutlets);
+    const merged = [...formattedSessions, ...formattedAudits];
+    merged.sort((a, b) => b.timestamp - a.timestamp);
+    return merged;
+  }, [trainingSessions, auditInspections]);
 
-  const baseOutlets: OutletItem[] = rawOutlets.map((item) => {
-    if (isTrainer) {
-      const res = sessionResults[item.id] || sessionResults[item.name];
-      if (res) {
-        return {
-          ...item,
-          status: res.status,
-          grade: res.grade,
-          score: res.score,
-          lastDate: res.date ? `${res.date} (Selesai)` : 'Hari Ini (Selesai)',
-        };
-      }
-    } else {
-      const aRes = auditResults[item.id] || auditResults[item.name];
-      if (aRes) {
-        return {
-          ...item,
-          status: aRes.status,
-          score: aRes.score,
-          isCompliant: aRes.isCompliant,
-          lastDate: aRes.date ? `${aRes.date} (Selesai)` : 'Hari Ini (Selesai)',
-        };
-      }
-    }
-    return item;
-  });
+  // Filtered by role, active tab and search query
+  const filteredActivities = useMemo(() => {
+    return combinedActivities.filter((item) => {
+      // Strict RBAC: Trainer only sees training, Auditor only sees audit
+      if (isTrainer && item._type !== 'training') return false;
+      if (!isManager && !isTrainer && item._type !== 'audit') return false;
 
-  const outlets = baseOutlets.filter((item) => {
-    const matchesFilter =
-      filter === 'Semua' ||
-      item.status === filter ||
-      (filter === 'Compliant (OK)' && item.status === 'Compliant') ||
-      (filter === 'Non-Compliant (NOK)' && item.status === 'Non-Compliant');
-    const matchesSearch = !searchQuery.trim() || item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
-
-  // Check if an outlet has already been evaluated and must be locked
-  const isOutletEvaluated = (outlet: OutletItem) => {
-    if (isTrainer) {
-      return (
-        Boolean(sessionResults[outlet.id] || sessionResults[outlet.name]) ||
-        outlet.status === 'Lulus Sesi' ||
-        outlet.status === 'Perlu Re-Training'
-      );
-    } else {
-      return (
-        Boolean(auditResults[outlet.id] || auditResults[outlet.name]) ||
-        outlet.status === 'Compliant' ||
-        outlet.status === 'Non-Compliant'
-      );
-    }
-  };
-
-  const handleStartActivity = (outlet: OutletItem) => {
-    if (isManager) {
-      Alert.alert(
-        `Aksi Supervisi: ${outlet.name}`,
-        'Pilih jenis inspeksi atau pendampingan yang ingin dijalankan di gerai ini:',
-        [
-          {
-            text: 'Inspeksi Audit (OK/NOK)',
-            onPress: () => {
-              setSelectedAuditOutlet(outlet);
-              setIsAuditInspectionOpen(true);
-            },
-          },
-          {
-            text: 'In-House Training (Asesmen)',
-            onPress: () => {
-              setSelectedTrainerOutlet(outlet);
-              setIsTrainerAssessmentOpen(true);
-            },
-          },
-          { text: 'Batal', style: 'cancel' },
-        ]
-      );
-      return;
-    }
-
-    const isLocked = isOutletEvaluated(outlet);
-
-    // If already evaluated, lock and show read-only result dialog
-    if (isLocked) {
       if (isTrainer) {
-        Alert.alert(
-          'Sesi Training Terkunci 🔒',
-          `Outlet ${outlet.name} sudah selesai dinilai dan disahkan.\n\n` +
-          `• Tanggal: ${outlet.lastDate}\n` +
-          `• Hasil Akhir: Grade ${outlet.grade || 'B'} (${outlet.score || 85}%)\n` +
-          `• Status: ${outlet.status.toUpperCase()}\n\n` +
-          `Lembar penilaian ini telah ditandatangani secara digital oleh PIC Outlet dan Trainer dan tidak dapat diubah kembali untuk menjaga integritas data.`,
-          [{ text: 'Tutup', style: 'default' }]
-        );
+        if (activeTab === 'training' && !item.is_passed) return false;
+        if (activeTab === 'audit' && item.is_passed) return false;
+      } else if (!isManager) {
+        if (activeTab === 'training' && !item.is_compliant) return false;
+        if (activeTab === 'audit' && item.is_compliant) return false;
       } else {
-        Alert.alert(
-          'Audit Lapangan Terkunci 🔒',
-          `Inspeksi kepatuhan untuk ${outlet.name} sudah selesai disahkan.\n\n` +
-          `• Tanggal: ${outlet.lastDate}\n` +
-          `• Skor Kepatuhan: ${outlet.score}%\n` +
-          `• Status: ${outlet.isCompliant ? 'COMPLIANT (OK - MEMENUHI STANDAR)' : 'NON-COMPLIANT (NOK - ADA TEMUAN)'}\n\n` +
-          `Lembar inspeksi ini telah ditandatangani secara digital oleh Auditor dan Store Manager dan dikunci demi integritas data audit.`,
-          [{ text: 'Tutup', style: 'default' }]
-        );
+        if (activeTab === 'training' && item._type !== 'training') return false;
+        if (activeTab === 'audit' && item._type !== 'audit') return false;
       }
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.outlet_name.toLowerCase().includes(q) ||
+        (item.division && item.division.toLowerCase().includes(q)) ||
+        item.evaluator_name.toLowerCase().includes(q) ||
+        (item.target_name && item.target_name.toLowerCase().includes(q))
+      );
+    });
+  }, [combinedActivities, activeTab, searchQuery, isTrainer, isManager]);
+
+  // Handler to open detail
+  const handleOpenDetail = (item: ActivityItem) => {
+    setSelectedActivity(item);
+    setIsDetailModalOpen(true);
+  };
+
+  // Handler to open start session based on role
+  const handleOpenStartModal = () => {
+    if (isTrainer) {
+      handleChooseActivityType('training');
       return;
     }
+    if (!isManager) {
+      handleChooseActivityType('audit');
+      return;
+    }
+    setIsStartActionModalOpen(true);
+  };
 
-    // Only un-evaluated outlets can open the assessment/inspection sheet
-    if (isTrainer) {
-      setSelectedTrainerOutlet(outlet);
-      setIsTrainerAssessmentOpen(true);
-    } else {
-      setSelectedAuditOutlet(outlet);
-      setIsAuditInspectionOpen(true);
+  // Handler to start new on-demand activity with RBAC guard
+  const handleChooseActivityType = (type: 'training' | 'audit') => {
+    if (type === 'audit' && isTrainer) return;
+    if (type === 'training' && !isTrainer && !isManager) return;
+    setActionType(type);
+    setIsStartActionModalOpen(false);
+    setOutletSearchQuery('');
+    setIsOutletPickerOpen(true);
+  };
+
+  const handleSelectOutlet = (outlet: any) => {
+    setSelectedOutlet(outlet);
+    setIsOutletPickerOpen(false);
+    if (actionType === 'training') {
+      setIsTrainingSheetOpen(true);
+    } else if (actionType === 'audit') {
+      setIsAuditSheetOpen(true);
     }
   };
 
-  const handleTrainerSuccess = (result: {
-    outletId: string;
-    score: number;
-    grade: 'SB' | 'B' | 'C' | 'K';
-    isPassed: boolean;
-    status: string;
-  }) => {
-    if (selectedTrainerOutlet) {
-      setSessionResults((prev) => ({
-        ...prev,
-        [selectedTrainerOutlet.id]: {
-          grade: result.grade,
-          score: result.score,
-          status: result.status,
-        },
-        [selectedTrainerOutlet.name]: {
-          grade: result.grade,
-          score: result.score,
-          status: result.status,
-        },
-      }));
-    }
-  };
-
-  const handleAuditSuccess = (result: {
-    outletId: string;
-    score: number;
-    isCompliant: boolean;
-    status: string;
-  }) => {
-    if (selectedAuditOutlet) {
-      setAuditResults((prev) => ({
-        ...prev,
-        [selectedAuditOutlet.id]: {
-          score: result.score,
-          status: result.status,
-          isCompliant: result.isCompliant,
-        },
-        [selectedAuditOutlet.name]: {
-          score: result.score,
-          status: result.status,
-          isCompliant: result.isCompliant,
-        },
-      }));
-    }
-  };
-
-  const trainerFilters = ['Semua', 'Siap Training', 'Lulus Sesi', 'Perlu Re-Training'];
-  const auditorFilters = ['Semua', 'Siap Diaudit', 'Compliant (OK)', 'Non-Compliant (NOK)'];
+  // Fallback outlets if empty
+  const defaultFallbackOutlets = [
+    { id: '1', name: 'Outlet Senayan City', division: 'Jakarta Selatan' },
+    { id: '2', name: 'Outlet Central Park', division: 'Jakarta Barat' },
+    { id: '3', name: 'Outlet Grand Indonesia', division: 'Jakarta Pusat' },
+    { id: '4', name: 'Outlet BSD City', division: 'Tangerang Selatan' },
+    { id: '5', name: 'Outlet Kelapa Gading', division: 'Jakarta Utara' },
+  ];
+  const availableOutlets = outletsList.length > 0 ? outletsList : defaultFallbackOutlets;
+  const filteredOutlets = availableOutlets.filter(
+    (o) =>
+      o.name.toLowerCase().includes(outletSearchQuery.toLowerCase()) ||
+      (o.division && o.division.toLowerCase().includes(outletSearchQuery.toLowerCase()))
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -372,95 +254,258 @@ export default function OutletsScreen() {
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 130 }}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="never"
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
             tintColor={COLORS.primary}
             colors={[COLORS.primary]}
-            progressViewOffset={12}
+            progressViewOffset={60}
           />
         }
       >
         <BrandHeader
-          title={isTrainer ? 'Pilih Outlet Training' : 'Pilih Outlet Audit'}
+          title="Riwayat Aktivitas"
           subtitle={
             isTrainer
-              ? 'Pilih outlet yang akan dievaluasi kompetensi standarnya on-site'
-              : 'Pilih cabang yang akan diinspeksi kepatuhannya (OK / NOK)'
+              ? 'Histori evaluasi & asesmen kompetensi barista cabang'
+              : !isManager
+              ? 'Histori inspeksi kepatuhan & temuan audit gerai'
+              : 'Histori sesi evaluasi in-house training & inspeksi audit gerai'
           }
           overlap
-        />
-
-        {/* Search */}
-        <View style={{ paddingHorizontal: 20, marginTop: -26 }}>
+          right={
+            <TouchableOpacity
+              onPress={handleOpenStartModal}
+              accessibilityRole="button"
+              accessibilityLabel="Mulai aktivitas baru"
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                backgroundColor: '#FFFFFF',
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: RADIUS.pill,
+                ...SHADOW.card,
+              }}
+            >
+              <MaterialIcons name="add" size={17} color={COLORS.brandDeep} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.brandDeep }}>
+                {isTrainer ? 'Mulai Training' : !isManager ? 'Mulai Audit' : 'Mulai Baru'}
+              </Text>
+            </TouchableOpacity>
+          }
+        >
+          {/* Header Stat Strip */}
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 10,
-              backgroundColor: COLORS.surface,
-              borderRadius: RADIUS.pill,
-              paddingHorizontal: 18,
-              minHeight: 52,
-              ...SHADOW.raised,
+              marginTop: 22,
+              paddingVertical: 14,
+              borderRadius: RADIUS.lg,
+              backgroundColor: 'rgba(255,255,255,0.10)',
             }}
           >
-            <MaterialIcons name="search" size={21} color={COLORS.textMuted} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={isTrainer ? 'Cari nama cabang training...' : 'Cari cabang yang mau diaudit...'}
-              placeholderTextColor={COLORS.textMuted}
-              returnKeyType="search"
-              style={{ flex: 1, fontSize: 15, color: COLORS.textMain, padding: 0 }}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchQuery('')}
-                accessibilityLabel="Hapus pencarian"
-                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-              >
-                <MaterialIcons name="cancel" size={19} color={COLORS.textMuted} />
-              </TouchableOpacity>
+            {isTrainer ? (
+              <>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {trainingSessions.length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Sesi Training</Text>
+                </View>
+                <View style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {trainingSessions.filter((s: any) => s.is_passed !== false).length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Lulus Sesi</Text>
+                </View>
+                <View style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {trainingSessions.filter((s: any) => s.is_passed === false).length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Re-Training</Text>
+                </View>
+              </>
+            ) : !isManager ? (
+              <>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {auditInspections.length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Total Audit</Text>
+                </View>
+                <View style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {auditInspections.filter((a: any) => a.is_compliant).length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Gerai Patuh</Text>
+                </View>
+                <View style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {auditInspections.filter((a: any) => !a.is_compliant).length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Ada Temuan</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {combinedActivities.length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Total Riwayat</Text>
+                </View>
+                <View style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {trainingSessions.length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Sesi Training</Text>
+                </View>
+                <View style={{ width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}>
+                    {auditInspections.length}
+                  </Text>
+                  <Text style={{ ...TYPE.micro, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Audit Gerai</Text>
+                </View>
+              </>
             )}
           </View>
-        </View>
+        </BrandHeader>
 
-        {/* Filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-          style={{ marginTop: 18, marginBottom: 6 }}
-        >
-          {(isTrainer ? trainerFilters : auditorFilters).map((f) => {
-            const active = filter === f;
-            return (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setFilter(f)}
-                activeOpacity={0.8}
-                accessibilityState={{ selected: active }}
+        <View style={{ paddingHorizontal: 20 }}>
+          {/* Filter & Search Bar */}
+          <View style={{ marginTop: -26, ...SHADOW.raised }}>
+            <Card style={{ padding: 14 }}>
+              {/* Segmented Filter */}
+              <View
                 style={{
-                  minHeight: 40,
-                  justifyContent: 'center',
-                  paddingHorizontal: 16,
-                  borderRadius: RADIUS.pill,
-                  backgroundColor: active ? COLORS.brandDeep : COLORS.surface,
-                  ...SHADOW.card,
+                  flexDirection: 'row',
+                  backgroundColor: COLORS.surfaceSunken,
+                  borderRadius: RADIUS.md,
+                  padding: 4,
+                  marginBottom: 12,
                 }}
               >
-                <Text style={{ ...TYPE.label, color: active ? COLORS.onBrand : COLORS.textSecondary }}>{f}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('all')}
+                  activeOpacity={0.8}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 8,
+                    alignItems: 'center',
+                    borderRadius: RADIUS.sm,
+                    backgroundColor: activeTab === 'all' ? COLORS.surface : 'transparent',
+                    ...((activeTab === 'all' ? SHADOW.card : {}) as any),
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: activeTab === 'all' ? '800' : '600',
+                      color: activeTab === 'all' ? COLORS.textMain : COLORS.textSecondary,
+                    }}
+                  >
+                    {isTrainer ? `Semua Sesi (${trainingSessions.length})` : !isManager ? `Semua Audit (${auditInspections.length})` : `Semua (${combinedActivities.length})`}
+                  </Text>
+                </TouchableOpacity>
 
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, gap: 12 }}>
-          {outlets.length === 0 && (
-            <Card style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('training')}
+                  activeOpacity={0.8}
+                  style={{
+                    flex: 1.2,
+                    paddingVertical: 8,
+                    alignItems: 'center',
+                    borderRadius: RADIUS.sm,
+                    backgroundColor: activeTab === 'training' ? COLORS.surface : 'transparent',
+                    ...((activeTab === 'training' ? SHADOW.card : {}) as any),
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: activeTab === 'training' ? '800' : '600',
+                      color: activeTab === 'training' ? COLORS.primary : COLORS.textSecondary,
+                    }}
+                  >
+                    {isTrainer ? 'Lulus Sesi' : !isManager ? 'Compliant (OK)' : `In-House (${trainingSessions.length})`}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setActiveTab('audit')}
+                  activeOpacity={0.8}
+                  style={{
+                    flex: 1.1,
+                    paddingVertical: 8,
+                    alignItems: 'center',
+                    borderRadius: RADIUS.sm,
+                    backgroundColor: activeTab === 'audit' ? COLORS.surface : 'transparent',
+                    ...((activeTab === 'audit' ? SHADOW.card : {}) as any),
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: activeTab === 'audit' ? '800' : '600',
+                      color: activeTab === 'audit' ? (isTrainer ? COLORS.danger : COLORS.success) : COLORS.textSecondary,
+                    }}
+                  >
+                    {isTrainer ? 'Re-Training' : !isManager ? 'Temuan (NOK)' : `Audit (${auditInspections.length})`}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Search Box */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: COLORS.surfaceSunken,
+                  borderRadius: RADIUS.md,
+                  paddingHorizontal: 12,
+                  height: 42,
+                }}
+              >
+                <MaterialIcons name="search" size={20} color={COLORS.textMuted} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Cari riwayat gerai, asesor, auditor..."
+                  placeholderTextColor={COLORS.textMuted}
+                  style={{ flex: 1, marginLeft: 8, fontSize: 13, color: COLORS.textMain }}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <MaterialIcons name="close" size={18} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Card>
+          </View>
+
+          {/* List Title */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 12 }}>
+            <Text style={{ ...TYPE.h3, fontSize: 14.5, color: COLORS.textMain }}>
+              Daftar Riwayat ({filteredActivities.length})
+            </Text>
+            <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>Urutkan: Terbaru</Text>
+          </View>
+
+          {/* Empty State */}
+          {filteredActivities.length === 0 && !isLoading && (
+            <Card style={{ padding: 32, alignItems: 'center', justifyContent: 'center' }}>
               <View
                 style={{
                   width: 56,
@@ -469,204 +514,628 @@ export default function OutletsScreen() {
                   backgroundColor: COLORS.surfaceSunken,
                   alignItems: 'center',
                   justifyContent: 'center',
+                  marginBottom: 12,
                 }}
               >
-                <MaterialIcons name="search-off" size={28} color={COLORS.textMuted} />
+                <MaterialIcons name="history" size={28} color={COLORS.textMuted} />
               </View>
-              <Text style={{ ...TYPE.h3, color: COLORS.textMain, marginTop: 14 }}>Outlet tidak ditemukan</Text>
-              <Text style={{ ...TYPE.body, fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginTop: 4 }}>
-                Coba kata kunci lain atau ubah filter status.
+              <Text style={{ ...TYPE.h3, color: COLORS.textMain, marginBottom: 4 }}>
+                Belum Ada Riwayat
               </Text>
-              {(searchQuery.length > 0 || filter !== 'Semua') && (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchQuery('');
-                    setFilter('Semua');
-                  }}
-                  activeOpacity={0.8}
-                  style={{
-                    marginTop: 16,
-                    minHeight: 44,
-                    justifyContent: 'center',
-                    paddingHorizontal: 22,
-                    borderRadius: RADIUS.pill,
-                    backgroundColor: COLORS.primaryLight,
-                  }}
-                >
-                  <Text style={{ ...TYPE.label, color: COLORS.brandDark }}>Reset Filter</Text>
-                </TouchableOpacity>
-              )}
+              <Text style={{ ...TYPE.label, color: COLORS.textSecondary, textAlign: 'center', maxWidth: 240, marginBottom: 16 }}>
+                {searchQuery
+                  ? 'Tidak ada histori yang cocok dengan pencarian Anda.'
+                  : 'Mulai aktivitas in-house training atau audit sekarang untuk mencatat riwayat.'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsStartActionModalOpen(true)}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: COLORS.primary,
+                  paddingHorizontal: 16,
+                  paddingVertical: 9,
+                  borderRadius: RADIUS.pill,
+                }}
+              >
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#FFFFFF' }}>+ Mulai Sesi Baru</Text>
+              </TouchableOpacity>
             </Card>
           )}
 
-          {outlets.map((outlet) => {
-            const isLocked = isOutletEvaluated(outlet);
-            const isReady = outlet.status === 'Siap Diaudit' || outlet.status === 'Siap Training';
-            const isCompliant = outlet.status === 'Compliant' || (outlet.score && outlet.score >= 85);
-            const isSuccess = isTrainer ? outlet.status.includes('Lulus') : isCompliant;
-            const isWarning = isTrainer ? outlet.status.includes('Re-Training') : !isCompliant && !isReady;
-            const statusColor = isReady ? COLORS.primary : isSuccess ? COLORS.success : isWarning ? COLORS.danger : COLORS.textSecondary;
+          {/* History Item Cards */}
+          <View style={{ gap: 11 }}>
+            {filteredActivities.map((item) => {
+              const isAudit = item._type === 'audit';
+              const isPassed = isAudit ? item.is_compliant : item.is_passed;
+              const statusColor = isPassed ? COLORS.success : COLORS.danger;
 
-            return (
-              <TouchableOpacity
-                key={outlet.id}
-                onPress={() => handleStartActivity(outlet)}
-                activeOpacity={0.8}
-              >
-                <Card padded={false} style={{ overflow: 'hidden' }}>
-                  <View style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13 }}>
-                      {/* Left Badge: Trainer shows Grade, Auditor shows status icon */}
-                      {isTrainer ? (
-                        <GradeBadge grade={outlet.grade} />
-                      ) : (
-                        <View
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: RADIUS.md,
-                            backgroundColor: isReady
-                              ? COLORS.primaryLight
-                              : isCompliant
-                              ? COLORS.successLight
-                              : COLORS.dangerLight,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderWidth: 1,
-                            borderColor: isReady
-                              ? COLORS.primaryBorder
-                              : isCompliant
-                              ? COLORS.success
-                              : COLORS.danger,
-                          }}
-                        >
-                          <MaterialIcons
-                            name={isReady ? 'pending-actions' : isCompliant ? 'check' : 'close'}
-                            size={24}
-                            color={isReady ? COLORS.primary : isCompliant ? COLORS.success : COLORS.danger}
-                          />
-                        </View>
-                      )}
-
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ ...TYPE.h3, fontSize: 15, color: COLORS.textMain, flexShrink: 1 }} numberOfLines={1}>
-                            {outlet.name}
-                          </Text>
-                          {isLocked && <MaterialIcons name="lock" size={14} color={COLORS.textMuted} />}
-                        </View>
-                        <Text style={{ fontSize: 12.5, color: COLORS.textSecondary, marginTop: 3 }} numberOfLines={1}>
-                          {outlet.division}
-                        </Text>
-                      </View>
-
-                      {typeof outlet.score === 'number' ? (
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.textMain, letterSpacing: -0.5 }}>
-                            {outlet.score}%
-                          </Text>
-                          {!isTrainer && (
-                            <Text
-                              style={{
-                                ...TYPE.micro,
-                                color: isCompliant ? COLORS.success : COLORS.danger,
-                                marginTop: 1,
-                              }}
-                            >
-                              {isCompliant ? 'OK (COMPLIANT)' : 'NOK (TEMUAN)'}
-                            </Text>
-                          )}
-                        </View>
-                      ) : (
-                        <View
-                          style={{
-                            paddingHorizontal: 8,
-                            paddingVertical: 4,
-                            borderRadius: RADIUS.pill,
-                            backgroundColor: COLORS.primaryLight,
-                          }}
-                        >
-                          <Text style={{ ...TYPE.micro, color: COLORS.primary }}>SIAP AUDIT</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginTop: 13,
-                        paddingTop: 12,
-                        borderTopWidth: 1,
-                        borderTopColor: COLORS.divider,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusColor }} />
-                        <Text style={{ fontSize: 12, color: COLORS.textSecondary, flex: 1 }} numberOfLines={1}>
-                          {isReady
-                            ? 'Belum Dinilai (Tersedia untuk Audit)'
-                            : isTrainer
-                            ? outlet.status
-                            : isCompliant
-                            ? 'Selesai (Memenuhi Standar)'
-                            : 'Selesai (Terdapat Temuan)'}
-                        </Text>
-                      </View>
-
-                      {isLocked ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <MaterialIcons name="lock" size={15} color={COLORS.textMuted} />
-                          <Text style={{ ...TYPE.micro, color: COLORS.textMuted }}>TERKUNCI 🔒</Text>
-                        </View>
-                      ) : (
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => handleOpenDetail(item)}
+                  activeOpacity={0.82}
+                >
+                  <Card padded={false} style={{ overflow: 'hidden' }}>
+                    <View style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
+                      {/* Top Row: Activity Badge & Date */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                         <View
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',
-                            gap: 4,
-                            backgroundColor: COLORS.brandDeep,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
+                            gap: 5,
+                            backgroundColor: isAudit ? COLORS.successLight : COLORS.primaryLight,
+                            paddingHorizontal: 8.5,
+                            paddingVertical: 3.5,
                             borderRadius: RADIUS.pill,
                           }}
                         >
-                          <Text style={{ ...TYPE.micro, color: COLORS.onBrand, fontWeight: '700' }}>
-                            {isTrainer ? 'Mulai Nilai' : 'Mulai Audit (OK/NOK)'}
+                          <MaterialIcons
+                            name={isAudit ? 'fact-check' : 'school'}
+                            size={13}
+                            color={isAudit ? COLORS.success : COLORS.primary}
+                          />
+                          <Text
+                            style={{
+                              ...TYPE.micro,
+                              fontSize: 10.5,
+                              fontWeight: '800',
+                              color: isAudit ? COLORS.success : COLORS.primary,
+                            }}
+                          >
+                            {isAudit ? 'AUDIT LAPANGAN' : 'IN-HOUSE TRAINING'}
                           </Text>
-                          <MaterialIcons name="chevron-right" size={15} color={COLORS.onBrand} />
                         </View>
-                      )}
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <MaterialIcons name="calendar-today" size={12} color={COLORS.textMuted} />
+                          <Text style={{ ...TYPE.micro, color: COLORS.textMuted }}>{item.dateStr}</Text>
+                        </View>
+                      </View>
+
+                      {/* Main Outlet & Score Row */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ ...TYPE.h3, fontSize: 15.5, color: COLORS.textMain }} numberOfLines={1}>
+                            {item.outlet_name}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }} numberOfLines={1}>
+                            {item.division}
+                          </Text>
+                        </View>
+
+                        {/* Right Score Pill */}
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            {!isAudit && item.grade && <GradeBadge grade={item.grade} />}
+                            <Text style={{ fontSize: 18, fontWeight: '800', color: COLORS.textMain, letterSpacing: -0.5 }}>
+                              {item.score}%
+                            </Text>
+                          </View>
+                          <Text
+                            style={{
+                              ...TYPE.micro,
+                              fontSize: 10.5,
+                              color: statusColor,
+                              fontWeight: '700',
+                              marginTop: 1,
+                            }}
+                          >
+                            {isAudit
+                              ? item.is_compliant
+                                ? 'COMPLIANT (OK)'
+                                : `NON-COMPLIANT (${item.nok_items || 0} NOK)`
+                              : item.is_passed
+                              ? 'LULUS EVALUASI'
+                              : 'PERLU RE-TRAINING'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Bottom Person Row & Detail Link */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: 12,
+                          paddingTop: 10,
+                          borderTopWidth: 1,
+                          borderTopColor: COLORS.divider,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+                          <MaterialIcons name="person" size={14} color={COLORS.textMuted} />
+                          <Text style={{ fontSize: 11.5, color: COLORS.textSecondary }} numberOfLines={1}>
+                            {isAudit ? `Auditor: ${item.evaluator_name}` : `Trainer: ${item.evaluator_name}`}
+                          </Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Text style={{ fontSize: 11.5, fontWeight: '700', color: COLORS.primary }}>Rincian</Text>
+                          <MaterialIcons name="chevron-right" size={15} color={COLORS.primary} />
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            );
-          })}
+                  </Card>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
 
-      {/* Trainer / Manager: In-House Training Assessment Modal */}
-      {(isTrainer || isManager) && (
-        <InHouseAssessmentBottomSheet
-          visible={isTrainerAssessmentOpen}
-          outlet={selectedTrainerOutlet}
-          trainerName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Trainer TnD')}
-          onClose={() => setIsTrainerAssessmentOpen(false)}
-          onSuccess={handleTrainerSuccess}
-        />
-      )}
+      {/* ================= MODAL DETAIL RIWAYAT AKTIVITAS ================= */}
+      <Modal
+        visible={isDetailModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsDetailModalOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: COLORS.surface,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingTop: 20,
+              paddingBottom: 34,
+              maxHeight: Dimensions.get('window').height * 0.88,
+            }}
+          >
+            {/* Modal Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 }}>
+              <View>
+                <View
+                  style={{
+                    alignSelf: 'flex-start',
+                    backgroundColor: selectedActivity?._type === 'audit' ? COLORS.successLight : COLORS.primaryLight,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: RADIUS.pill,
+                    marginBottom: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      ...TYPE.micro,
+                      fontWeight: '800',
+                      color: selectedActivity?._type === 'audit' ? COLORS.success : COLORS.primary,
+                    }}
+                  >
+                    {selectedActivity?._type === 'audit' ? 'DETAIL AUDIT LAPANGAN' : 'DETAIL IN-HOUSE TRAINING'}
+                  </Text>
+                </View>
+                <Text style={{ ...TYPE.h2, fontSize: 18, color: COLORS.textMain }}>
+                  {selectedActivity?.outlet_name}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsDetailModalOpen(false)}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: COLORS.surfaceSunken,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MaterialIcons name="close" size={20} color={COLORS.textMain} />
+              </TouchableOpacity>
+            </View>
 
-      {/* Auditor / Manager: Field Audit Inspection (OK / NOK) Modal */}
-      {(!isTrainer || isManager) && (
-        <AuditInspectionBottomSheet
-          visible={isAuditInspectionOpen}
-          outlet={selectedAuditOutlet}
-          auditorName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Auditor Lapangan')}
-          onClose={() => setIsAuditInspectionOpen(false)}
-          onSuccess={handleAuditSuccess}
-        />
+            <ScrollView style={{ paddingHorizontal: 20 }}>
+              {selectedActivity && (
+                <View style={{ gap: 14, paddingBottom: 20 }}>
+                  {/* Summary Metric Card */}
+                  <View
+                    style={{
+                      backgroundColor: COLORS.surfaceSunken,
+                      borderRadius: RADIUS.md,
+                      padding: 14,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <View>
+                      <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>HASIL AKHIR</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                        {selectedActivity._type === 'training' && selectedActivity.grade && (
+                          <GradeBadge grade={selectedActivity.grade} />
+                        )}
+                        <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.textMain }}>
+                          {selectedActivity.score}%
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ ...TYPE.micro, color: COLORS.textSecondary }}>STATUS</Text>
+                      <View
+                        style={{
+                          backgroundColor:
+                            (selectedActivity._type === 'audit' ? selectedActivity.is_compliant : selectedActivity.is_passed)
+                              ? COLORS.successLight
+                              : COLORS.dangerLight,
+                          paddingHorizontal: 10,
+                          paddingVertical: 4.5,
+                          borderRadius: RADIUS.pill,
+                          marginTop: 3,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 11.5,
+                            fontWeight: '800',
+                            color:
+                              (selectedActivity._type === 'audit' ? selectedActivity.is_compliant : selectedActivity.is_passed)
+                                ? COLORS.success
+                                : COLORS.danger,
+                          }}
+                        >
+                          {selectedActivity._type === 'audit'
+                            ? selectedActivity.is_compliant
+                              ? 'COMPLIANT'
+                              : 'NON-COMPLIANT'
+                            : selectedActivity.is_passed
+                            ? 'LULUS SESI'
+                            : 'RE-TRAINING'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Metadata Info List */}
+                  <View style={{ backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.divider, borderRadius: RADIUS.md, padding: 14, gap: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12.5, color: COLORS.textSecondary }}>Tanggal Pelaksanaan:</Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: COLORS.textMain }}>{selectedActivity.dateStr}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12.5, color: COLORS.textSecondary }}>
+                        {selectedActivity._type === 'audit' ? 'Auditor:' : 'Trainer / Asesor:'}
+                      </Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: COLORS.textMain }}>{selectedActivity.evaluator_name}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12.5, color: COLORS.textSecondary }}>
+                        {selectedActivity._type === 'audit' ? 'PIC Outlet:' : 'Peserta Training:'}
+                      </Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: COLORS.textMain }}>{selectedActivity.target_name || 'Tim Gerai'}</Text>
+                    </View>
+                    {selectedActivity._type === 'audit' && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 12.5, color: COLORS.textSecondary }}>Kepatuhan Butir:</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: COLORS.textMain }}>
+                          {selectedActivity.ok_items} Sesuai • {selectedActivity.nok_items} Temuan
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Audit Findings List if audit */}
+                  {selectedActivity._type === 'audit' && (
+                    <View style={{ marginTop: 6 }}>
+                      <Text style={{ ...TYPE.h3, fontSize: 14, color: COLORS.textMain, marginBottom: 8 }}>
+                        Daftar Temuan Ketidaksesuaian ({selectedActivity.findings?.length || 0}):
+                      </Text>
+
+                      {selectedActivity.findings && selectedActivity.findings.length > 0 ? (
+                        <View style={{ gap: 8 }}>
+                          {selectedActivity.findings.map((f, fIdx) => (
+                            <View
+                              key={fIdx}
+                              style={{
+                                backgroundColor: COLORS.dangerLight,
+                                borderWidth: 1,
+                                borderColor: COLORS.danger,
+                                borderRadius: RADIUS.md,
+                                padding: 12,
+                                gap: 4,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                                <MaterialIcons name="warning" size={16} color={COLORS.danger} style={{ marginTop: 1 }} />
+                                <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: COLORS.textMain }}>
+                                  {f.point_text || 'Item Checklist Audit'}
+                                </Text>
+                              </View>
+                              {f.notes && (
+                                <Text style={{ fontSize: 11.5, color: COLORS.danger, marginLeft: 22 }}>
+                                  Catatan: {f.notes}
+                                </Text>
+                              )}
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <View
+                          style={{
+                            backgroundColor: COLORS.successLight,
+                            padding: 14,
+                            borderRadius: RADIUS.md,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text style={{ fontSize: 12.5, fontWeight: '700', color: COLORS.success }}>
+                            ✅ Seluruh butir checklist terpenuhi (Nihil Temuan).
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* General Notes */}
+                  {selectedActivity.notes && (
+                    <View style={{ backgroundColor: COLORS.surfaceSunken, padding: 12, borderRadius: RADIUS.md, marginTop: 4 }}>
+                      <Text style={{ ...TYPE.micro, color: COLORS.textSecondary, marginBottom: 4 }}>CATATAN UMUM</Text>
+                      <Text style={{ fontSize: 12.5, color: COLORS.textMain, fontStyle: 'italic', lineHeight: 18 }}>
+                        "{selectedActivity.notes}"
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ================= MODAL PILIH TIPE AKTIVITAS "+ MULAI BARU" ================= */}
+      <Modal
+        visible={isStartActionModalOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setIsStartActionModalOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <View style={{ width: '100%', maxWidth: 360, backgroundColor: COLORS.surface, borderRadius: 24, padding: 22 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View>
+                <Text style={{ ...TYPE.h2, fontSize: 17, color: COLORS.textMain }}>Mulai Sesi Baru</Text>
+                <Text style={{ ...TYPE.micro, color: COLORS.textSecondary, marginTop: 2 }}>Jadwal Bebas & On-Demand</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsStartActionModalOpen(false)}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.surfaceSunken, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <MaterialIcons name="close" size={18} color={COLORS.textMain} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 12.5, color: COLORS.textSecondary, marginBottom: 16, lineHeight: 18 }}>
+              Pilih jenis evaluasi yang ingin Anda jalankan secara langsung:
+            </Text>
+
+            <View style={{ gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => handleChooseActivityType('training')}
+                activeOpacity={0.85}
+                style={{
+                  backgroundColor: COLORS.primaryLight,
+                  borderRadius: RADIUS.md,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  borderWidth: 1.5,
+                  borderColor: COLORS.primary,
+                }}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: COLORS.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MaterialIcons name="school" size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary }}>In-House Training</Text>
+                  <Text style={{ fontSize: 11.5, color: COLORS.textSecondary, marginTop: 1 }}>Asesmen kompetensi staf gerai</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={20} color={COLORS.primary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => handleChooseActivityType('audit')}
+                activeOpacity={0.85}
+                style={{
+                  backgroundColor: COLORS.successLight,
+                  borderRadius: RADIUS.md,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  borderWidth: 1.5,
+                  borderColor: COLORS.success,
+                }}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: COLORS.success,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <MaterialIcons name="fact-check" size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.success }}>Audit Lapangan</Text>
+                  <Text style={{ fontSize: 11.5, color: COLORS.textSecondary, marginTop: 1 }}>Checklist kepatuhan & temuan gerai</Text>
+                </View>
+                <MaterialIcons name="chevron-right" size={20} color={COLORS.success} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ================= MODAL PEMILIHAN OUTLET ================= */}
+      <Modal
+        visible={isOutletPickerOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsOutletPickerOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: COLORS.surface,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingTop: 20,
+              paddingBottom: 34,
+              maxHeight: Dimensions.get('window').height * 0.8,
+            }}
+          >
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 }}>
+              <View>
+                <Text style={{ ...TYPE.h2, fontSize: 17, color: COLORS.textMain }}>
+                  {actionType === 'audit' ? 'Pilih Gerai untuk Audit Lapangan' : 'Pilih Gerai untuk In-House Training'}
+                </Text>
+                <Text style={{ ...TYPE.micro, color: COLORS.textSecondary, marginTop: 2 }}>
+                  Jadwal Bebas • Pilih gerai untuk memulai on-demand
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setIsOutletPickerOpen(false)}
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surfaceSunken, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <MaterialIcons name="close" size={20} color={COLORS.textMain} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: COLORS.surfaceSunken,
+                  borderRadius: RADIUS.md,
+                  paddingHorizontal: 12,
+                  height: 44,
+                }}
+              >
+                <MaterialIcons name="search" size={20} color={COLORS.textMuted} />
+                <TextInput
+                  value={outletSearchQuery}
+                  onChangeText={setOutletSearchQuery}
+                  placeholder="Cari nama gerai atau wilayah..."
+                  placeholderTextColor={COLORS.textMuted}
+                  style={{ flex: 1, marginLeft: 8, fontSize: 14, color: COLORS.textMain }}
+                />
+              </View>
+            </View>
+
+            {/* Outlet List */}
+            <ScrollView style={{ paddingHorizontal: 20 }}>
+              {filteredOutlets.map((outlet, idx) => (
+                <TouchableOpacity
+                  key={outlet.id || idx}
+                  onPress={() => handleSelectOutlet(outlet)}
+                  activeOpacity={0.7}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 14,
+                    borderBottomWidth: idx < filteredOutlets.length - 1 ? 1 : 0,
+                    borderBottomColor: COLORS.divider,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: RADIUS.sm,
+                        backgroundColor: actionType === 'audit' ? COLORS.successLight : COLORS.primaryLight,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <MaterialIcons
+                        name={actionType === 'audit' ? 'storefront' : 'school'}
+                        size={20}
+                        color={actionType === 'audit' ? COLORS.success : COLORS.primary}
+                      />
+                    </View>
+                    <View>
+                      <Text style={{ ...TYPE.h3, fontSize: 14.5, color: COLORS.textMain }}>{outlet.name}</Text>
+                      <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>{outlet.division || 'Area Operasional'}</Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: actionType === 'audit' ? COLORS.successLight : COLORS.primaryLight,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: RADIUS.pill,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: actionType === 'audit' ? COLORS.success : COLORS.primary,
+                      }}
+                    >
+                      Mulai
+                    </Text>
+                    <MaterialIcons
+                      name="arrow-forward"
+                      size={14}
+                      color={actionType === 'audit' ? COLORS.success : COLORS.primary}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ================= BOTTOM SHEETS UNTUK EKSEKUSI ================= */}
+      {selectedOutlet && (
+        <>
+          <AuditInspectionBottomSheet
+            visible={isAuditSheetOpen}
+            outlet={selectedOutlet}
+            auditorName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Auditor Lapangan')}
+            onClose={() => setIsAuditSheetOpen(false)}
+            onSuccess={() => {
+              setIsAuditSheetOpen(false);
+              loadData();
+            }}
+          />
+
+          <InHouseAssessmentBottomSheet
+            visible={isTrainingSheetOpen}
+            outlet={selectedOutlet}
+            trainerName={user?.name || (isManager ? 'Rian (HRBP Manager)' : 'Trainer TnD')}
+            onClose={() => setIsTrainingSheetOpen(false)}
+            onSuccess={() => {
+              setIsTrainingSheetOpen(false);
+              loadData();
+            }}
+          />
+        </>
       )}
     </View>
   );

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,21 +10,21 @@ type TabMeta = { label: string; icon: keyof typeof MaterialIcons.glyphMap };
 
 const TRAINER_TABS: Record<string, TabMeta> = {
   home: { label: 'Training', icon: 'school' },
-  outlets: { label: 'In-House', icon: 'fact-check' },
+  outlets: { label: 'Riwayat', icon: 'history' },
   findings: { label: 'Modul SOP', icon: 'menu-book' },
   profile: { label: 'Profil', icon: 'person' },
 };
 
 const AUDITOR_TABS: Record<string, TabMeta> = {
   home: { label: 'Beranda', icon: 'home' },
-  outlets: { label: 'Outlet', icon: 'storefront' },
+  outlets: { label: 'Riwayat', icon: 'history' },
   findings: { label: 'Temuan', icon: 'assignment-late' },
   profile: { label: 'Profil', icon: 'person' },
 };
 
 const MANAGER_TABS: Record<string, TabMeta> = {
   home: { label: 'Ringkasan', icon: 'insights' },
-  outlets: { label: 'Outlet', icon: 'storefront' },
+  outlets: { label: 'Riwayat', icon: 'history' },
   findings: { label: 'Audit & SOP', icon: 'menu-book' },
   profile: { label: 'Profil', icon: 'person' },
 };
@@ -36,10 +36,42 @@ export function CustomTabBar({ state, navigation }: any) {
   const isTrainer = !isManager && (user?.role?.toUpperCase().includes('TRAINER') || user?.email?.includes('trainer'));
   const tabs = isManager ? MANAGER_TABS : isTrainer ? TRAINER_TABS : AUDITOR_TABS;
 
-  // The FAB performs the primary action: navigate to the outlet list.
+  // The FAB directly triggers the permitted action based on role
   const goToPrimaryAction = useCallback(() => {
-    navigation.navigate('outlets' as never);
-  }, [navigation]);
+    if (isTrainer) {
+      // Trainer directly starts In-House Training
+      navigation.navigate('home', { openAction: 'training' });
+      return;
+    }
+    if (!isManager) {
+      // Auditor directly starts Audit Lapangan
+      navigation.navigate('home', { openAction: 'audit' });
+      return;
+    }
+    // Manager has supervisory access to choose either
+    Alert.alert(
+      'Mulai Aktivitas Supervisi',
+      'Pilih aktivitas on-demand yang ingin Anda jalankan sekarang:',
+      [
+        {
+          text: 'Mulai In-House Training',
+          onPress: () => {
+            navigation.navigate('home', { openAction: 'training' });
+          },
+        },
+        {
+          text: 'Mulai Audit Lapangan',
+          onPress: () => {
+            navigation.navigate('home', { openAction: 'audit' });
+          },
+        },
+        {
+          text: 'Batal',
+          style: 'cancel',
+        },
+      ]
+    );
+  }, [isTrainer, isManager, navigation]);
 
   const renderTabItem = (route: { key: string; name: string }, index: number) => {
     const meta = tabs[route.name] ?? { label: route.name, icon: 'circle' as const };

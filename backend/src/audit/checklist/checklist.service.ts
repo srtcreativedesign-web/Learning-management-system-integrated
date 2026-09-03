@@ -40,12 +40,32 @@ export class ChecklistService {
       findings: [
         {
           point_text: 'Alat pemadam kebakaran (APAR) kedaluwarsa',
-          notes: 'Kadaluwarsa per Juni 2026',
+          notes: 'Kadaluwarsa per Juni 2026, jarum indikator tekanan di zona merah',
           is_compliant: false,
         },
         {
           point_text: 'Jalur evakuasi terhalang tumpukan kardus stok',
-          notes: 'Tumpukan barang menutupi pintu belakang',
+          notes: 'Tumpukan barang menutupi akses pintu darurat belakang',
+          is_compliant: false,
+        },
+        {
+          point_text: 'Penyimpanan bahan baku basah tidak terpisah dari bahan kering',
+          notes: 'Botol susu terbuka diletakkan bercampur dengan bubuk teh tanpa alas kontainer',
+          is_compliant: false,
+        },
+        {
+          point_text: 'Log pemantauan suhu cold storage harian tidak terisi',
+          notes: 'Pencatatan suhu freezer kosong selama 3 hari terakhir',
+          is_compliant: false,
+        },
+        {
+          point_text: 'Tempat sampah area bar preparation tidak bertutup injak (pedal)',
+          notes: 'Mekanisme pedal injak rusak sehingga tempat sampah dalam kondisi terbuka',
+          is_compliant: false,
+        },
+        {
+          point_text: 'Kelengkapan kotak P3K (First Aid Kit) tidak sesuai standar',
+          notes: 'Perban steril dan cairan antiseptik luka bakar habis belum di-restock',
           is_compliant: false,
         },
       ],
@@ -64,7 +84,12 @@ export class ChecklistService {
       findings: [
         {
           point_text: 'Pekerja tidak menggunakan celemek & hairnet',
-          notes: '2 barista belum memakai hairnet',
+          notes: '2 barista belum memakai hairnet saat jam operasional sibuk',
+          is_compliant: false,
+        },
+        {
+          point_text: 'Label masa kedaluwarsa pada botol sirup terkelupas',
+          notes: 'Tanggal buka botol pada sirup gula tidak terbaca jelas',
           is_compliant: false,
         },
       ],
@@ -83,7 +108,17 @@ export class ChecklistService {
       findings: [
         {
           point_text: 'Dokumen izin sanitasi belum diperbarui',
-          notes: 'Masa berlaku habis',
+          notes: 'Masa berlaku habis per Mei 2026, dalam proses perpanjangan dinas',
+          is_compliant: false,
+        },
+        {
+          point_text: 'Kain lap mikrofiber tidak dipisahkan berdasarkan kode warna',
+          notes: 'Kain lap meja customer dan kain lap steam wand mesin kopi tertukar',
+          is_compliant: false,
+        },
+        {
+          point_text: 'Lampu penerangan area dishwashing redup',
+          notes: '1 bohlam mati membutuhkan penggantian segera',
           is_compliant: false,
         },
       ],

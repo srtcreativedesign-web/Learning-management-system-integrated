@@ -410,8 +410,12 @@ let localAuditInspections: any[] = [
     ok_items: 14,
     nok_items: 6,
     findings: [
-      { point_text: 'Alat pemadam kebakaran (APAR) kedaluwarsa', notes: 'Kadaluwarsa per Juni 2026' },
-      { point_text: 'Jalur evakuasi terhalang tumpukan kardus stok', notes: 'Tumpukan barang menutupi pintu belakang' },
+      { point_text: 'Alat pemadam kebakaran (APAR) kedaluwarsa', notes: 'Kadaluwarsa per Juni 2026, jarum indikator tekanan di zona merah' },
+      { point_text: 'Jalur evakuasi terhalang tumpukan kardus stok', notes: 'Tumpukan barang menutupi akses pintu darurat belakang' },
+      { point_text: 'Penyimpanan bahan baku basah tidak terpisah dari bahan kering', notes: 'Botol susu terbuka diletakkan bercampur dengan bubuk teh tanpa alas kontainer' },
+      { point_text: 'Log pemantauan suhu cold storage harian tidak terisi', notes: 'Pencatatan suhu freezer kosong selama 3 hari terakhir' },
+      { point_text: 'Tempat sampah area bar preparation tidak bertutup injak (pedal)', notes: 'Mekanisme pedal injak rusak sehingga tempat sampah dalam kondisi terbuka' },
+      { point_text: 'Kelengkapan kotak P3K (First Aid Kit) tidak sesuai standar', notes: 'Perban steril dan cairan antiseptik luka bakar habis belum di-restock' },
     ],
   },
   {
@@ -426,7 +430,8 @@ let localAuditInspections: any[] = [
     ok_items: 18,
     nok_items: 2,
     findings: [
-      { point_text: 'Pekerja tidak menggunakan celemek & hairnet', notes: '2 barista belum memakai hairnet' },
+      { point_text: 'Pekerja tidak menggunakan celemek & hairnet', notes: '2 barista belum memakai hairnet saat jam operasional sibuk' },
+      { point_text: 'Label masa kedaluwarsa pada botol sirup terkelupas', notes: 'Tanggal buka botol pada sirup gula tidak terbaca jelas' },
     ],
   },
   {
@@ -441,7 +446,9 @@ let localAuditInspections: any[] = [
     ok_items: 17,
     nok_items: 3,
     findings: [
-      { point_text: 'Dokumen izin sanitasi belum diperbarui', notes: 'Masa berlaku habis' },
+      { point_text: 'Dokumen izin sanitasi belum diperbarui', notes: 'Masa berlaku habis per Mei 2026, dalam proses perpanjangan dinas' },
+      { point_text: 'Kain lap mikrofiber tidak dipisahkan berdasarkan kode warna', notes: 'Kain lap meja customer dan kain lap steam wand mesin kopi tertukar' },
+      { point_text: 'Lampu penerangan area dishwashing redup', notes: '1 bohlam mati membutuhkan penggantian segera' },
     ],
   },
 ];

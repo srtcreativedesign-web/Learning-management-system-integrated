@@ -13,6 +13,8 @@ exports.CertificatePdfService = void 0;
 const common_1 = require("@nestjs/common");
 const generator_1 = require("@pdfme/generator");
 const schemas_1 = require("@pdfme/schemas");
+const fs_1 = require("fs");
+const path_1 = require("path");
 const certificate_template_service_1 = require("./certificate-template.service");
 let CertificatePdfService = class CertificatePdfService {
     certificateTemplateService;
@@ -149,6 +151,129 @@ let CertificatePdfService = class CertificatePdfService {
             ],
         };
     }
+    buildTemplateFromMeta(meta, basePdf, ctx) {
+        const PAGE_W = 297;
+        const PAGE_H = 210;
+        const PX_TO_PT = (PAGE_W / 800) / (25.4 / 72);
+        const box = (xPct, yPct, w, h) => ({
+            x: Math.max(0, (xPct / 100) * PAGE_W - w / 2),
+            y: Math.max(0, (yPct / 100) * PAGE_H - h / 2),
+        });
+        const text = (name, xPct, yPct, sizePx, color, opts = {}) => {
+            const width = opts.width ?? 200;
+            const height = opts.height ?? Math.max(8, sizePx * PX_TO_PT * 0.5);
+            return {
+                name,
+                type: 'text',
+                position: box(xPct, yPct, width, height),
+                width,
+                height,
+                alignment: 'center',
+                verticalAlignment: 'middle',
+                fontSize: sizePx * PX_TO_PT,
+                fontColor: color,
+                lineHeight: 1.2,
+                characterSpacing: opts.spacing ?? 0,
+                ...(opts.bold ? { fontWeight: 'bold' } : {}),
+            };
+        };
+        const schema = [];
+        const inputs = {};
+        const add = (field, value) => {
+            schema.push(field);
+            inputs[field.name] = value;
+        };
+        if (meta.show_title ?? true) {
+            add(text('judul_sertifikat', meta.title_pos_x ?? 50, meta.title_pos_y ?? 22, meta.title_font_size ?? 24, meta.title_font_color ?? '#0F4F68', { spacing: 2, bold: true, height: 14 }), meta.title_text ?? 'SERTIFIKAT KELULUSAN');
+            if (meta.title_subtext) {
+                add(text('subjudul_sertifikat', meta.title_pos_x ?? 50, (meta.title_pos_y ?? 22) + 5, 11, meta.title_font_color ?? '#64748b'), meta.title_subtext);
+            }
+        }
+        if (meta.show_cert_no ?? true) {
+            add(text('nomor', meta.cert_no_pos_x ?? 82, meta.cert_no_pos_y ?? 11, meta.cert_no_font_size ?? 10.5, meta.cert_no_font_color ?? '#64748b', { width: 110 }), '__NOMOR__');
+        }
+        if (meta.show_intro ?? true) {
+            add(text('keterangan_pembuka', meta.intro_pos_x ?? 50, meta.intro_pos_y ?? 33, meta.intro_font_size ?? 12, meta.intro_font_color ?? '#64748b'), meta.intro_text ?? 'Diberikan kepada:');
+        }
+        add(text('nama', meta.name_pos_x ?? 50, meta.name_pos_y ?? 44, meta.name_font_size ?? 36, meta.name_font_color ?? '#1e293b', { bold: true, height: 18 }), '__NAMA__');
+        if (meta.show_course ?? true) {
+            add(text('modul', meta.course_pos_x ?? 50, meta.course_pos_y ?? 58, meta.course_font_size ?? 14, meta.course_font_color ?? '#1e293b', { width: 230, height: 16 }), meta.course_custom_text?.replace('{course}', ctx.courseTitle) ??
+                `Telah berhasil menyelesaikan dan lulus uji kompetensi kuis dengan nilai (${ctx.score}%) pada modul “${ctx.courseTitle}”`);
+        }
+        if (meta.show_date ?? true) {
+            add(text('tanggal', meta.date_pos_x ?? 50, meta.date_pos_y ?? 70, meta.date_font_size ?? 11, meta.date_font_color ?? '#475569', { width: 110 }), '__TANGGAL__');
+        }
+        const signer = (idx, defX, defName, defRole) => {
+            if ((meta[`show_signer${idx}`] ?? true) === false)
+                return;
+            const x = meta[`signer${idx}_pos_x`] ?? defX;
+            const y = meta[`signer${idx}_pos_y`] ?? 85;
+            const color = meta[`signer${idx}_font_color`] ?? '#0F4F68';
+            const signature = meta[`signer${idx}_signature_url`];
+            if (signature) {
+                const w = 34;
+                const h = 12;
+                schema.push({
+                    name: `ttd_${idx}`,
+                    type: 'image',
+                    position: box(x, y - 4.5, w, h),
+                    width: w,
+                    height: h,
+                });
+                inputs[`ttd_${idx}`] = signature;
+            }
+            const lineW = 44;
+            schema.push({
+                name: `garis_ttd_${idx}`,
+                type: 'line',
+                position: box(x, y + 1.5, lineW, 0.3),
+                width: lineW,
+                height: 0.3,
+                color: '#cbd5e1',
+            });
+            inputs[`garis_ttd_${idx}`] = '';
+            add(text(`pengesah_${idx}`, x, y + 6.5, 10, color, { width: 90, height: 12, bold: true }), `${meta[`signer${idx}_name`] ?? defName}\n${meta[`signer${idx}_role`] ?? defRole}`);
+        };
+        signer(1, 25, 'Rian Hidayat, S.Psi', 'Head of TnD & Academy');
+        signer(2, 75, 'Hendri Wijaya, B.Bus', 'Operations Director');
+        if (meta.show_qr ?? false) {
+            const size = (meta.qr_size ?? 48) * (PAGE_W / 800);
+            schema.push({
+                name: 'qr_verifikasi',
+                type: 'qrcode',
+                position: box(meta.qr_pos_x ?? 91, meta.qr_pos_y ?? 85, size, size),
+                width: size,
+                height: size,
+                backgroundColor: '#ffffff',
+                barColor: '#0f172a',
+            });
+            inputs['qr_verifikasi'] = '__VERIFIKASI_URL__';
+        }
+        return { template: { basePdf, schemas: [schema] }, inputs };
+    }
+    readBasePdf(basePdfUrl) {
+        if (!basePdfUrl || !basePdfUrl.toLowerCase().endsWith('.pdf'))
+            return null;
+        const filePath = (0, path_1.join)(process.cwd(), basePdfUrl.replace(/^\//, ''));
+        if (!(0, fs_1.existsSync)(filePath))
+            return null;
+        return `data:application/pdf;base64,${(0, fs_1.readFileSync)(filePath).toString('base64')}`;
+    }
+    defaultInputs(cert, formattedDate, meta) {
+        return {
+            header_instansi: 'PT SOBAT KULINER INDONESIA — TND ACADEMY',
+            judul_sertifikat: 'SERTIFIKAT KELULUSAN',
+            nomor: `No: ${cert.certificate_number}`,
+            keterangan_pembuka: 'Diberikan kepada:',
+            nama: cert.recipient_name,
+            keterangan_modul: 'Telah berhasil menyelesaikan dan lulus uji kompetensi standar operasional pada modul:',
+            modul: `“${cert.course_title}”`,
+            nilai: `Hasil Evaluasi: LULUS (Skor ${cert.score}%)`,
+            tanggal: `Jakarta, ${formattedDate}`,
+            pengesah_1: `${meta?.signer1_name || 'Rian Hidayat, S.Psi'}\n${meta?.signer1_role || 'Head of TnD & Academy'}`,
+            pengesah_2: `${meta?.signer2_name || 'Hendri Wijaya, B.Bus'}\n${meta?.signer2_role || 'Operations Director'}`,
+        };
+    }
     async generate(attemptId) {
         const all = await this.certificateTemplateService.getIssuedCertificates();
         const cert = all.find((c) => c.id.toLowerCase() === attemptId.toLowerCase() ||
@@ -158,37 +283,40 @@ let CertificatePdfService = class CertificatePdfService {
             throw new common_1.NotFoundException(`Sertifikat untuk attempt '${attemptId}' tidak ditemukan.`);
         }
         const templateInDb = cert.template?.pdfme_template;
-        const template = templateInDb && templateInDb.schemas
-            ? templateInDb
-            : this.getDefaultPdfmeTemplate(cert.template.name_pos_y ? (cert.template.name_pos_y / 100) * 210 : 95, cert.template.name_font_size || 32, cert.template.name_font_color || '#0F4F68');
+        const customBasePdf = this.readBasePdf(cert.template?.base_pdf_url);
         const formattedDate = new Date(cert.issue_date).toLocaleDateString('id-ID', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
         });
-        const signer1Name = templateInDb?.signer1_name || 'Rian Hidayat, S.Psi';
-        const signer1Role = templateInDb?.signer1_role || 'Head of TnD & Academy';
-        const signer2Name = templateInDb?.signer2_name || 'Hendri Wijaya, B.Bus';
-        const signer2Role = templateInDb?.signer2_role || 'Operations Director';
-        const inputs = [
-            {
-                header_instansi: 'PT SOBAT KULINER INDONESIA — TND ACADEMY',
-                judul_sertifikat: 'SERTIFIKAT KELULUSAN',
-                nomor: `No: ${cert.certificate_number}`,
-                keterangan_pembuka: 'Diberikan kepada:',
-                nama: cert.recipient_name,
-                keterangan_modul: 'Telah berhasil menyelesaikan dan lulus uji kompetensi standar operasional pada modul:',
-                modul: `“${cert.course_title}”`,
-                nilai: `Hasil Evaluasi: LULUS (Skor ${cert.score}%)`,
-                tanggal: `Jakarta, ${formattedDate}`,
-                pengesah_1: `${signer1Name}\n${signer1Role}`,
-                pengesah_2: `${signer2Name}\n${signer2Role}`,
-            },
-        ];
+        let template;
+        let inputs;
+        if (templateInDb && templateInDb.schemas) {
+            template = templateInDb;
+            inputs = [this.defaultInputs(cert, formattedDate, templateInDb)];
+        }
+        else if (templateInDb || customBasePdf) {
+            const built = this.buildTemplateFromMeta(templateInDb || {}, customBasePdf ?? { width: 297, height: 210, padding: [0, 0, 0, 0] }, { score: cert.score, courseTitle: cert.course_title });
+            template = built.template;
+            inputs = [
+                Object.fromEntries(Object.entries(built.inputs).map(([k, v]) => [
+                    k,
+                    v
+                        .replace('__NAMA__', cert.recipient_name)
+                        .replace('__NOMOR__', `No: ${cert.certificate_number}`)
+                        .replace('__TANGGAL__', `Jakarta, ${formattedDate}`)
+                        .replace('__VERIFIKASI_URL__', `${process.env.PUBLIC_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3001}`}/certificate-templates/verify/${cert.id}`),
+                ])),
+            ];
+        }
+        else {
+            template = this.getDefaultPdfmeTemplate(cert.template.name_pos_y ? (cert.template.name_pos_y / 100) * 210 : 95, cert.template.name_font_size || 32, cert.template.name_font_color || '#0F4F68');
+            inputs = [this.defaultInputs(cert, formattedDate, templateInDb)];
+        }
         const pdfUint8 = await (0, generator_1.generate)({
             template,
             inputs,
-            plugins: schemas_1.builtInPlugins,
+            plugins: { ...schemas_1.builtInPlugins, image: schemas_1.image, line: schemas_1.line, qrcode: schemas_1.barcodes.qrcode },
         });
         return Buffer.from(pdfUint8);
     }
