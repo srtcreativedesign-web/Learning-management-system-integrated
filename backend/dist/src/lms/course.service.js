@@ -42,6 +42,7 @@ let CourseService = class CourseService {
                     include: {
                         Quiz: {
                             include: {
+                                Template: true,
                                 Questions: {
                                     include: {
                                         Options: true
@@ -62,6 +63,7 @@ let CourseService = class CourseService {
                     include: {
                         Quiz: {
                             include: {
+                                Template: true,
                                 Questions: {
                                     include: {
                                         Options: true

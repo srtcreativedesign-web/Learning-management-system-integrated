@@ -27,6 +27,17 @@ export declare class CourseController {
                     type: string;
                     question_text: string;
                 })[];
+                Template: {
+                    id: string;
+                    name: string;
+                    bg_image_url: string;
+                    name_pos_x: number;
+                    name_pos_y: number;
+                    name_font_size: number;
+                    name_font_color: string;
+                    pdfme_template: import("@prisma/client/runtime/client").JsonValue | null;
+                    base_pdf_url: string | null;
+                } | null;
             } & {
                 id: string;
                 passing_score: number;
@@ -64,6 +75,17 @@ export declare class CourseController {
                     type: string;
                     question_text: string;
                 })[];
+                Template: {
+                    id: string;
+                    name: string;
+                    bg_image_url: string;
+                    name_pos_x: number;
+                    name_pos_y: number;
+                    name_font_size: number;
+                    name_font_color: string;
+                    pdfme_template: import("@prisma/client/runtime/client").JsonValue | null;
+                    base_pdf_url: string | null;
+                } | null;
             } & {
                 id: string;
                 passing_score: number;

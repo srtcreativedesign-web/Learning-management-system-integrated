@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   BookOpen,
@@ -12,6 +12,7 @@ import {
   Circle,
   Zap,
   Loader2,
+  Award,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +21,9 @@ import { getApiUrl, API_BASE_URL } from '@/lib/api';
 export const LibraryDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'materi' | 'kuis'>('materi');
+  const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', id],
@@ -32,8 +35,42 @@ export const LibraryDetailView: React.FC = () => {
     enabled: Boolean(id),
   });
 
+  const { data: templates = [] } = useQuery<any[]>({
+    queryKey: ['certificate-templates-list'],
+    queryFn: async () => {
+      const res = await fetch(getApiUrl('/certificate-templates'));
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   const material = course?.Materials?.[0];
   const quiz = material?.Quiz;
+
+  const handleUpdateTemplate = async (newTemplateId: string) => {
+    if (!quiz?.id) return;
+    setIsUpdatingTemplate(true);
+    try {
+      const res = await fetch(getApiUrl(`/quizzes/${quiz.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          certificate_template_id: newTemplateId || null,
+        }),
+      });
+      if (res.ok) {
+        await queryClient.invalidateQueries({ queryKey: ['course', id] });
+        alert('Template sertifikat untuk kursus ini berhasil diperbarui!');
+      } else {
+        alert('Gagal memperbarui template sertifikat.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kesalahan saat memperbarui template.');
+    } finally {
+      setIsUpdatingTemplate(false);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 w-full space-y-6 max-w-7xl mx-auto">
@@ -175,6 +212,45 @@ export const LibraryDetailView: React.FC = () => {
                     <Badge variant="secondary" className="px-4 py-1.5 font-bold text-xs">
                       {quiz.Questions?.length || 0} Soal
                     </Badge>
+                  </div>
+
+                  {/* Quiz & Certificate Settings Card */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#0F4F68]/10 text-[#0F4F68] flex items-center justify-center font-bold">
+                        <Award className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          Template Sertifikat Kelulusan Modul
+                        </p>
+                        <h4 className="text-sm font-bold text-slate-800">
+                          {quiz.Template?.name || 'Default: Template Klasik TnD (Classic Navy)'}
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          Passing score kelulusan: <strong>{quiz.passing_score || 80}%</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-bold text-slate-600 shrink-0">
+                        Ganti Template:
+                      </label>
+                      <select
+                        value={quiz.certificate_template_id || ''}
+                        onChange={(e) => handleUpdateTemplate(e.target.value)}
+                        disabled={isUpdatingTemplate}
+                        className="h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold shadow-xs focus:ring-2 focus:ring-[#419CC3] cursor-pointer"
+                      >
+                        <option value="">Default (Template Klasik TnD)</option>
+                        {templates.map((t: any) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   {/* Questions */}

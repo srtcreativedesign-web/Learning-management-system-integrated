@@ -32,6 +32,7 @@ export class CourseService {
           include: {
             Quiz: {
               include: {
+                Template: true,
                 Questions: {
                   include: {
                     Options: true
@@ -53,6 +54,7 @@ export class CourseService {
           include: {
             Quiz: {
               include: {
+                Template: true,
                 Questions: {
                   include: {
                     Options: true

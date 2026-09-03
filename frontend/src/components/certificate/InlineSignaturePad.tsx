@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { PenTool, RotateCcw, Upload, CheckCircle2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { resolveCertificateImageUrl } from './CertificateCanvas';
 
 interface InlineSignaturePadProps {
   signatureUrl: string | null;
@@ -22,6 +23,13 @@ export const InlineSignaturePad: React.FC<InlineSignaturePadProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [strokeColor, setStrokeColor] = useState(strokeColorDefault);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
+
+  const resolvedPreviewUrl = resolveCertificateImageUrl(signatureUrl);
+
+  useEffect(() => {
+    setPreviewError(false);
+  }, [signatureUrl]);
 
   // Setup canvas resolution
   useEffect(() => {
@@ -154,9 +162,14 @@ export const InlineSignaturePad: React.FC<InlineSignaturePadProps> = ({
           </div>
         )}
 
-        {signatureUrl && !hasDrawn && (
+        {resolvedPreviewUrl && !hasDrawn && !previewError && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-2 bg-white/90">
-            <img src={signatureUrl} alt="Signature Preview" className="max-h-20 object-contain" />
+            <img
+              src={resolvedPreviewUrl}
+              alt="Signature Preview"
+              className="max-h-20 object-contain"
+              onError={() => setPreviewError(true)}
+            />
           </div>
         )}
       </div>

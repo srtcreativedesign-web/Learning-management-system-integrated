@@ -72,6 +72,9 @@ let QuizController = class QuizController {
             data: aiQuestions
         };
     }
+    async updateQuiz(quizId, body) {
+        return this.quizService.updateQuiz(quizId, body);
+    }
     async submitQuiz(quizId, payload) {
         return this.quizService.submitQuiz(quizId, payload);
     }
@@ -121,6 +124,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], QuizController.prototype, "generateQuiz", null);
+__decorate([
+    (0, common_1.Patch)(':quizId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update quiz settings (passing score, certificate template)' }),
+    __param(0, (0, common_1.Param)('quizId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], QuizController.prototype, "updateQuiz", null);
 __decorate([
     (0, common_1.Post)(':quizId/submit'),
     __param(0, (0, common_1.Param)('quizId')),

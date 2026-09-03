@@ -14,7 +14,6 @@ const common_1 = require("@nestjs/common");
 const generator_1 = require("@pdfme/generator");
 const schemas_1 = require("@pdfme/schemas");
 const certificate_template_service_1 = require("./certificate-template.service");
-const common_2 = require("@pdfme/common");
 let CertificatePdfService = class CertificatePdfService {
     certificateTemplateService;
     constructor(certificateTemplateService) {
@@ -22,7 +21,7 @@ let CertificatePdfService = class CertificatePdfService {
     }
     getDefaultPdfmeTemplate(namePosY = 95, fontSize = 32, fontColor = '#0F4F68') {
         return {
-            basePdf: common_2.BLANK_PDF,
+            basePdf: { width: 297, height: 210, padding: [0, 0, 0, 0] },
             schemas: [
                 [
                     {

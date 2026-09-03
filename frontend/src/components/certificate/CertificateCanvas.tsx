@@ -111,6 +111,22 @@ interface CertificateCanvasProps {
   onSelectElement?: (elementKey: string) => void;
 }
 
+export const resolveCertificateImageUrl = (url?: string | null): string | null => {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return null;
+  if (
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://')
+  ) {
+    return trimmed;
+  }
+  const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${API_BASE_URL}${cleanPath}`;
+};
+
 export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   data,
   scale = 1,
@@ -132,10 +148,14 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
     template,
   } = data;
 
+  const [sig1Error, setSig1Error] = React.useState(false);
+  const [sig2Error, setSig2Error] = React.useState(false);
+
   const theme = template?.bg_image_url || 'theme:classic-navy';
-  const customBgUrl =
+  const rawCustomBgUrl =
     template?.base_pdf_url ||
-    (theme.startsWith('/uploads') || theme.startsWith('http') ? theme : null);
+    (theme.startsWith('/uploads') || theme.startsWith('http') || theme.startsWith('data:') ? theme : null);
+  const customBgUrl = resolveCertificateImageUrl(rawCustomBgUrl);
 
   // Metadata parser
   const meta = (template?.pdfme_template as any) || {};
@@ -197,7 +217,8 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   const showSigner1 = template?.show_signer1 ?? meta.show_signer1 ?? true;
   const signer1Role = template?.signer1_role ?? meta.signer1_role ?? 'Head of TnD & Academy';
   const signer1Name = template?.signer1_name ?? meta.signer1_name ?? 'Rian Hidayat, S.Psi';
-  const signer1SigUrl = template?.signer1_signature_url ?? meta.signer1_signature_url ?? null;
+  const signer1SigRaw = template?.signer1_signature_url ?? meta.signer1_signature_url ?? null;
+  const signer1SigUrl = resolveCertificateImageUrl(signer1SigRaw);
   const signer1X = template?.signer1_pos_x ?? meta.signer1_pos_x ?? 24;
   const signer1Y = template?.signer1_pos_y ?? meta.signer1_pos_y ?? 85;
   const signer1Color = template?.signer1_font_color ?? meta.signer1_font_color ?? '#1e293b';
@@ -206,10 +227,19 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
   const showSigner2 = template?.show_signer2 ?? meta.show_signer2 ?? true;
   const signer2Role = template?.signer2_role ?? meta.signer2_role ?? 'Operations Director';
   const signer2Name = template?.signer2_name ?? meta.signer2_name ?? 'Hendri Wijaya, B.Bus';
-  const signer2SigUrl = template?.signer2_signature_url ?? meta.signer2_signature_url ?? null;
+  const signer2SigRaw = template?.signer2_signature_url ?? meta.signer2_signature_url ?? null;
+  const signer2SigUrl = resolveCertificateImageUrl(signer2SigRaw);
   const signer2X = template?.signer2_pos_x ?? meta.signer2_pos_x ?? 76;
   const signer2Y = template?.signer2_pos_y ?? meta.signer2_pos_y ?? 85;
   const signer2Color = template?.signer2_font_color ?? meta.signer2_font_color ?? '#1e293b';
+
+  React.useEffect(() => {
+    setSig1Error(false);
+  }, [signer1SigUrl]);
+
+  React.useEffect(() => {
+    setSig2Error(false);
+  }, [signer2SigUrl]);
 
   // 10. QR & Seal
   const showQr = template?.show_qr ?? meta.show_qr ?? true;
@@ -292,14 +322,14 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
         {/* BACKGROUND LAYER                                         */}
         {/* ======================================================== */}
         {customBgUrl ? (
-          customBgUrl.toLowerCase().endsWith('.pdf') ? (
+          customBgUrl.toLowerCase().includes('.pdf') ? (
             <iframe
-              src={`${customBgUrl.startsWith('http') ? customBgUrl : `${API_BASE_URL}${customBgUrl}`}#toolbar=0&navpanes=0&scrollbar=0`}
+              src={`${customBgUrl}#toolbar=0&navpanes=0&scrollbar=0`}
               className="absolute inset-0 w-full h-full border-0 pointer-events-none z-0"
             />
           ) : (
             <img
-              src={customBgUrl.startsWith('http') ? customBgUrl : `${API_BASE_URL}${customBgUrl}`}
+              src={customBgUrl}
               alt="Custom Certificate Design"
               className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
             />
@@ -546,25 +576,22 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             }}
           >
             <div className="h-10 flex items-center justify-center my-0.5">
-              {signer1SigUrl ? (
+              {signer1SigUrl && !sig1Error ? (
                 <img
-                  src={
-                    signer1SigUrl.startsWith('http')
-                      ? signer1SigUrl
-                      : `${API_BASE_URL}${signer1SigUrl}`
-                  }
+                  src={signer1SigUrl}
                   alt="Tanda Tangan 1"
-                  className="h-9 max-w-[130px] object-contain"
+                  className="h-9 max-w-[130px] object-contain select-none pointer-events-none"
+                  onError={() => setSig1Error(true)}
                 />
               ) : (
                 <span
-                  className="text-xl italic font-bold opacity-85"
+                  className="text-xl italic font-bold opacity-85 select-none"
                   style={{
                     fontFamily: "'Brush Script MT', 'Great Vibes', cursive",
                     color: signer1Color,
                   }}
                 >
-                  {signer1Name.split(',')[0]}
+                  {signer1Name ? signer1Name.split(',')[0] : 'Tanda Tangan'}
                 </span>
               )}
             </div>
@@ -595,25 +622,22 @@ export const CertificateCanvas: React.FC<CertificateCanvasProps> = ({
             }}
           >
             <div className="h-10 flex items-center justify-center my-0.5">
-              {signer2SigUrl ? (
+              {signer2SigUrl && !sig2Error ? (
                 <img
-                  src={
-                    signer2SigUrl.startsWith('http')
-                      ? signer2SigUrl
-                      : `${API_BASE_URL}${signer2SigUrl}`
-                  }
+                  src={signer2SigUrl}
                   alt="Tanda Tangan 2"
-                  className="h-9 max-w-[130px] object-contain"
+                  className="h-9 max-w-[130px] object-contain select-none pointer-events-none"
+                  onError={() => setSig2Error(true)}
                 />
               ) : (
                 <span
-                  className="text-xl italic font-bold opacity-85"
+                  className="text-xl italic font-bold opacity-85 select-none"
                   style={{
                     fontFamily: "'Brush Script MT', 'Great Vibes', cursive",
                     color: signer2Color,
                   }}
                 >
-                  {signer2Name.split(',')[0]}
+                  {signer2Name ? signer2Name.split(',')[0] : 'Tanda Tangan'}
                 </span>
               )}
             </div>

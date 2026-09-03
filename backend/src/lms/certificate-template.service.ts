@@ -223,6 +223,8 @@ export class CertificateTemplateService {
           id: template.id,
           name: template.name,
           bg_image_url: template.bg_image_url,
+          base_pdf_url: template.base_pdf_url || null,
+          pdfme_template: template.pdfme_template || null,
           name_pos_x: template.name_pos_x,
           name_pos_y: template.name_pos_y,
           name_font_size: template.name_font_size,

@@ -262,4 +262,31 @@ export class QuizService {
       orderBy: { created_at: 'desc' }
     });
   }
+
+  // [Admin] Update quiz settings (e.g. certificate template, passing score)
+  async updateQuiz(
+    quizId: string,
+    data: { certificate_template_id?: string | null; passing_score?: number }
+  ) {
+    const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } });
+    if (!quiz) throw new NotFoundException('Quiz tidak ditemukan');
+
+    return this.prisma.quiz.update({
+      where: { id: quizId },
+      data: {
+        ...(data.certificate_template_id !== undefined && {
+          certificate_template_id: data.certificate_template_id || null,
+        }),
+        ...(data.passing_score !== undefined && {
+          passing_score: Number(data.passing_score),
+        }),
+      },
+      include: {
+        Template: true,
+        Material: {
+          include: { Course: true },
+        },
+      },
+    });
+  }
 }

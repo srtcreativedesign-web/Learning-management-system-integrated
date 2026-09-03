@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Patch, BadRequestException } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { AiService } from './ai.service';
@@ -75,6 +75,15 @@ export class QuizController {
       message: "Soal berhasil di-generate secara cerdas oleh AI Groq",
       data: aiQuestions
     };
+  }
+
+  @Patch(':quizId')
+  @ApiOperation({ summary: 'Update quiz settings (passing score, certificate template)' })
+  async updateQuiz(
+    @Param('quizId') quizId: string,
+    @Body() body: { certificate_template_id?: string | null; passing_score?: number }
+  ) {
+    return this.quizService.updateQuiz(quizId, body);
   }
 
   @Post(':quizId/submit')

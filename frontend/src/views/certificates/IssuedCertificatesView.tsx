@@ -38,6 +38,8 @@ interface IssuedCertItem {
     id: string;
     name: string;
     bg_image_url: string;
+    base_pdf_url?: string | null;
+    pdfme_template?: any;
     name_pos_x: number;
     name_pos_y: number;
     name_font_size: number;
@@ -47,7 +49,9 @@ interface IssuedCertItem {
 
 export const IssuedCertificatesView: React.FC = () => {
   const [certificates, setCertificates] = useState<IssuedCertItem[]>([]);
+  const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [updatingQuizId, setUpdatingQuizId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDivision, setSelectedDivision] = useState('ALL');
 
@@ -147,7 +151,45 @@ export const IssuedCertificatesView: React.FC = () => {
 
   useEffect(() => {
     loadIssuedCertificates();
+    loadTemplates();
   }, []);
+
+  const loadTemplates = async () => {
+    try {
+      const res = await fetch(getApiUrl('/certificate-templates'));
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableTemplates(data);
+      }
+    } catch (err) {
+      console.error('Error loading templates:', err);
+    }
+  };
+
+  const handleChangeCertTemplate = async (quizId: string, newTemplateId: string) => {
+    if (!quizId) return;
+    setUpdatingQuizId(quizId);
+    try {
+      const res = await fetch(getApiUrl(`/quizzes/${quizId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          certificate_template_id: newTemplateId || null,
+        }),
+      });
+      if (res.ok) {
+        await loadIssuedCertificates();
+        alert('Template sertifikat berhasil diubah! Desain sertifikat langsung diperbarui.');
+      } else {
+        alert('Gagal mengubah template sertifikat.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kesalahan saat mengubah template.');
+    } finally {
+      setUpdatingQuizId(null);
+    }
+  };
 
   const divisions = useMemo(() => {
     const list = Array.from(new Set(certificates.map((c) => c.recipient_division).filter(Boolean)));
@@ -177,7 +219,11 @@ export const IssuedCertificatesView: React.FC = () => {
         month: 'long',
         year: 'numeric',
       }),
-      template: item.template,
+      template: {
+        ...item.template,
+        base_pdf_url: item.template.base_pdf_url || undefined,
+        ...(item.template.pdfme_template || {}),
+      },
     });
   };
 
@@ -259,6 +305,7 @@ export const IssuedCertificatesView: React.FC = () => {
                 <th className="py-3 px-4">Nama Peserta</th>
                 <th className="py-3 px-4">Modul / Pelatihan</th>
                 <th className="py-3 px-4 text-center">Nilai</th>
+                <th className="py-3 px-4">Template Desain</th>
                 <th className="py-3 px-4">Tanggal Terbit</th>
                 <th className="py-3 px-4 text-center">Status</th>
                 <th className="py-3 px-4 text-right">Aksi</th>
@@ -267,13 +314,13 @@ export const IssuedCertificatesView: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     Memuat data sertifikat...
                   </td>
                 </tr>
               ) : filteredCertificates.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     Tidak ada sertifikat yang cocok dengan pencarian.
                   </td>
                 </tr>
@@ -297,6 +344,23 @@ export const IssuedCertificatesView: React.FC = () => {
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800">
                         {cert.score}%
                       </span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <select
+                        value={cert.template?.id === 'default-template' ? '' : cert.template?.id || ''}
+                        onChange={(e) => handleChangeCertTemplate(cert.quiz_id, e.target.value)}
+                        disabled={updatingQuizId === cert.quiz_id}
+                        className="text-xs py-1 px-2 rounded-lg border border-slate-200 bg-white hover:border-[#0F4F68] font-medium text-slate-700 shadow-2xs focus:ring-1 focus:ring-[#0F4F68] cursor-pointer max-w-[170px] truncate"
+                        title="Ubah template sertifikat untuk modul ini"
+                      >
+                        <option value="">Default (Classic Navy)</option>
+                        {availableTemplates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
                     </td>
 
                     <td className="py-3.5 px-4 text-slate-500 text-[11.5px]">

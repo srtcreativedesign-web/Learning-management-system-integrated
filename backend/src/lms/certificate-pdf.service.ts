@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { generate } from '@pdfme/generator';
 import { builtInPlugins } from '@pdfme/schemas';
 import { CertificateTemplateService } from './certificate-template.service';
-import { BLANK_PDF } from '@pdfme/common';
 
 @Injectable()
 export class CertificatePdfService {
@@ -15,7 +14,9 @@ export class CertificatePdfService {
    */
   private getDefaultPdfmeTemplate(namePosY: number = 95, fontSize: number = 32, fontColor: string = '#0F4F68') {
     return {
-      basePdf: BLANK_PDF,
+      // A4 landscape (297x210mm). BLANK_PDF milik pdfme itu A4 portrait,
+      // sedangkan seluruh schema di bawah ditata untuk lebar 297mm.
+      basePdf: { width: 297, height: 210, padding: [0, 0, 0, 0] as [number, number, number, number] },
       schemas: [
         [
           {

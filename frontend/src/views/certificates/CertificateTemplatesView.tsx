@@ -737,9 +737,9 @@ export const CertificateTemplatesView: React.FC = () => {
       {/* Visual Editor Studio Modal */}
       {isEditing && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 md:p-6 animate-in fade-in">
-          <div className="bg-white w-full max-w-7xl h-[95vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+          <div className="bg-white w-full max-w-7xl h-[95vh] max-h-[95vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
             {/* Modal Top Header */}
-            <div className="px-6 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90">
+            <div className="px-6 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-[#0F4F68] text-white flex items-center justify-center font-bold shadow-xs">
                   <PenTool className="w-4 h-4" />
@@ -776,11 +776,11 @@ export const CertificateTemplatesView: React.FC = () => {
             </div>
 
             {/* Studio Body */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden min-h-0">
               {/* Left Settings Panel (5 cols) */}
-              <div className="lg:col-span-5 border-r border-slate-200 flex flex-col h-full bg-slate-50/50">
+              <div className="lg:col-span-5 border-r border-slate-200 flex flex-col h-full min-h-0 overflow-hidden bg-slate-50/50">
                 {/* Main Tab Switcher */}
-                <div className="grid grid-cols-3 p-2 bg-slate-100/90 border-b border-slate-200 text-xs font-bold gap-1">
+                <div className="grid grid-cols-3 p-2 bg-slate-100/90 border-b border-slate-200 text-xs font-bold gap-1 shrink-0">
                   <button
                     onClick={() => setActiveTab('elements')}
                     className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
@@ -816,7 +816,7 @@ export const CertificateTemplatesView: React.FC = () => {
                 </div>
 
                 {/* Tab Scrollable Body */}
-                <div className="flex-1 p-5 overflow-y-auto space-y-4 text-slate-800">
+                <div className="flex-1 p-5 overflow-y-auto space-y-4 text-slate-800 min-h-0 overscroll-contain">
                   {/* Template Name Input */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
@@ -1825,7 +1825,7 @@ export const CertificateTemplatesView: React.FC = () => {
               </div>
 
               {/* Right Live Visual Canvas (7 cols) */}
-              <div className="lg:col-span-7 bg-slate-900/95 flex flex-col items-center justify-center p-6 relative overflow-auto">
+              <div className="lg:col-span-7 bg-slate-900/95 flex flex-col items-center justify-center p-6 relative overflow-auto min-h-0">
                 <div className="absolute top-4 right-4 z-30 flex items-center gap-2 bg-black/50 backdrop-blur-xs px-3 py-1.5 rounded-xl text-white text-xs">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                   <span className="font-bold">Live Visual Canvas</span>

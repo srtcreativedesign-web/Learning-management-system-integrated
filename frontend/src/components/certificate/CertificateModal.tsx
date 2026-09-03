@@ -30,7 +30,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header Modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70 print:hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70 print:hidden shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-[#419CC3]/10 text-[#419CC3] flex items-center justify-center font-bold">
               <ShieldCheck className="w-5 h-5" />
@@ -76,7 +76,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
         </div>
 
         {/* Certificate Display Area (Scrollable if needed, responsive scaling) */}
-        <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-slate-100/70 print:bg-white print:p-0">
+        <div className="flex-1 overflow-auto p-6 flex items-center justify-center bg-slate-100/70 print:bg-white print:p-0 min-h-0">
           <div className="w-full flex items-center justify-center">
             {/* Scale canvas slightly for desktop modal */}
             <CertificateCanvas data={data} scale={0.95} />
@@ -84,7 +84,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
         </div>
 
         {/* Footer info banner */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 print:hidden">
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 print:hidden shrink-0">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>

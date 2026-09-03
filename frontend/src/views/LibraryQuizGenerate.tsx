@@ -13,6 +13,7 @@ import {
   BookOpen,
   FileEdit,
   RotateCcw,
+  Award,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,6 +57,7 @@ export const LibraryQuizGenerate: React.FC = () => {
   const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [passingScore, setPassingScore] = useState(80);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   // Fetch all courses for the dropdown selector
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery<CourseItem[]>({
@@ -63,6 +65,16 @@ export const LibraryQuizGenerate: React.FC = () => {
     queryFn: async () => {
       const res = await fetch(getApiUrl('/lms/courses'));
       if (!res.ok) throw new Error('Failed to load courses');
+      return res.json();
+    },
+  });
+
+  // Fetch certificate templates for selection
+  const { data: templates = [] } = useQuery<any[]>({
+    queryKey: ['certificate-templates-list'],
+    queryFn: async () => {
+      const res = await fetch(getApiUrl('/certificate-templates'));
+      if (!res.ok) return [];
       return res.json();
     },
   });
@@ -194,6 +206,7 @@ export const LibraryQuizGenerate: React.FC = () => {
       const payload = {
         course_material_id: materialId,
         passing_score: Number(passingScore) || 80,
+        certificate_template_id: selectedTemplateId || null,
         questions: generatedQuestions.map((q) => ({
           text: q.question_text,
           type: 'MULTIPLE_CHOICE',
@@ -280,6 +293,27 @@ export const LibraryQuizGenerate: React.FC = () => {
                 max={100}
                 className="h-10 text-sm font-bold bg-slate-50"
               />
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-[#419CC3]" /> Template Sertifikat Kelulusan
+              </label>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium shadow-xs focus:outline-hidden focus:ring-2 focus:ring-[#419CC3] transition-all cursor-pointer"
+              >
+                <option value="">Default (Template Klasik TnD)</option>
+                {templates.map((t: any) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-400">
+                Sertifikat dengan desain ini otomatis diterbitkan saat karyawan lulus kuis modul ini.
+              </p>
             </div>
           </div>
 
